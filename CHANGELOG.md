@@ -2,6 +2,16 @@
 
 All notable changes to the Zest specification.
 
+## Unreleased — shipped by zest-server 1.2 and Bridge 3.1, to be specified in 1.1
+
+Additive behaviour a 1.0 package can rely on when `GET /api/info` lists the capability; none of it changes what a conformant package must do.
+
+- `grading.idempotent`: `POST /api/grades/:contentId` accepts `clientSubmitId` (8 to 64 characters of `[A-Za-z0-9_-]`); the same id from the same user returns the first submission with `duplicate: true`. Bridge 3.1 derives it from the payload.
+- `grading.ags-status`: submission responses carry `agsStatus`, `agsError`, `agsAttempts` and `contentVersion`; failed gradebook posts are retried by the server for 24 hours. Scores are scaled to the line item's maximum.
+- `state.versioned`: state saves accept `baseVersion`, `source` (`sync` | `beacon` | `drain`) and `clientUpdatedAt`; responses carry `version`, `hashAlgo` (`md5` | `sha256`) and `conflict`. Sync status gains `'expired'`; `Zest.getSyncStatus()`.
+- `config.per-assignment` (only when the server enables it): `Zest.getConfig(assignmentId?)`, `saveConfig(data, assignmentId?)`, `deleteConfig(assignmentId?)`; `GET /api/config/:contentId?v=2` returns `source` as `override` | `content-default` | `default` | `none` with the 1.0 vocabulary in `legacySource`; without `v=2` the 1.0 vocabulary stays in `source` and the level is in `resolvedFrom`. Saves with an `assignmentId` are refused with `409 { code: 'PER_ASSIGNMENT_DISABLED' }` where not enabled.
+- `PUT /api/content/:contentId/files` replaces a package in place; `contentVersion` increments and each submission records the version it was made with.
+
 ## [1.0.1] — 2026-09-11 — Errata
 
 Corrections so the text matches the reference server (zest-server 1.1) and the shipped Bridge 3.0.1. No package change is required; `"zestSpec": "1.0"` remains the declared version.
