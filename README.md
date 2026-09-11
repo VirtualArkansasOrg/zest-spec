@@ -8,14 +8,14 @@ Zest is an LTI 1.3 tool that enables embedding interactive content (simulations,
 
 ## Specification
 
-**[Zest Specification v1.0](./spec/v1.0.md)** — The complete spec.
+**[Zest Specification v1.0.1](./spec/v1.0.1.md)** — The complete spec (current). [v1.0](./spec/v1.0.md) remains for reference; 1.0.1 is an errata release and packages written against 1.0 need no change.
 
 Covers:
 - **zest.json Manifest** — Content package metadata, grading mode, parameters, sandbox config
 - **Bridge API v3.0** — Client-side JavaScript API (`window.Zest`) for context, grading, state, config
 - **Content Conventions** — Standard file layout (`index.html`, `editor.html`, `review.html`, etc.)
 - **Assessment Config** — Explore (guided text) and Quiz (auto-graded MC/TF) modes
-- **Config Cascade** — Four-level teacher config resolution system
+- **Config Cascade** — Teacher config resolution (saved config, package default, none)
 - **Event Log** — Compact interaction tracking format
 - **Server API** — REST endpoints for upload, grades, state, config
 - **postMessage Protocol** — Wrapper-to-content communication
@@ -54,7 +54,10 @@ Minimal `index.html`:
 
 | Spec Version | Bridge API | Status |
 |:---:|:---:|:---:|
-| 1.0 | 3.0.0 | **Current** |
+| [1.0.1](./spec/v1.0.1.md) | 3.0.1 | **Current** (errata; compatible with 1.0 packages) |
+| [1.0](./spec/v1.0.md) | 3.0.0 | Superseded |
+
+A package declares the `major.minor` it targets in `zest.json` (`"zestSpec": "1.0"`). Servers accept any package whose major version they support; patch releases of the spec never change what a conformant package must do. Changes are listed in [CHANGELOG.md](./CHANGELOG.md).
 
 ## License
 
