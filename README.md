@@ -58,4 +58,4 @@ Minimal `index.html`:
 
 ## License
 
-MIT
+MIT. The names "Zest" and "Zestable" are trademarks of Virtual Arkansas (applications pending); see [TRADEMARKS.md](TRADEMARKS.md).
