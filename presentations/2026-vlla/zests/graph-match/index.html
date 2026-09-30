@@ -241,6 +241,9 @@
     .pts.p2 { background: rgba(61,220,132,0.18); color: var(--ok); }
     .pts.p1 { background: rgba(255,181,71,0.18); color: var(--warn); }
     .pts.p0 { background: rgba(255,107,122,0.15); color: var(--bad); }
+    body.wide .sheet.wide-sheet { max-width: 800px; }
+    body.wide .rlist { grid-template-columns: 1fr 1fr; }
+    body.wide .big-score { margin: 0 0 10px; }
     .submit-msg { font-size: 14px; margin-top: 10px; text-align: center; line-height: 1.45; min-height: 20px; }
     .submit-msg.ok { color: var(--ok); } .submit-msg.bad { color: var(--bad); } .submit-msg.warn { color: var(--warn); }
     .toast {
@@ -361,7 +364,7 @@
     </div>
 
     <div class="overlay" id="results" role="dialog" aria-labelledby="results-h">
-      <div class="sheet">
+      <div class="sheet wide-sheet">
         <h2 id="results-h">Results</h2>
         <div class="big-score"><div class="num" id="res-num">0 / 0</div><div class="of" id="res-of">points</div></div>
         <div class="rlist" id="res-list"></div>
@@ -565,6 +568,16 @@
       if (!st || st.v !== 1 || st.sig !== configSig(CFG)) return false;
       if (!st.items || st.items.length !== CFG.challenges.length) return false;
       if (typeof st.idx !== 'number' || st.idx < 0 || st.idx >= CFG.challenges.length) return false;
+      for (var i = 0; i < st.items.length; i++) {
+        var it = st.items[i];
+        if (!it || typeof it.a !== 'number' || typeof it.h !== 'number' || typeof it.k !== 'number') return false;
+        if (it.status !== 'open' && it.status !== 'matched' && it.status !== 'missed') return false;
+        it.a = snap(it.a, 'a'); it.h = snap(it.h, 'h'); it.k = snap(it.k, 'k');
+        it.points = it.points === 2 || it.points === 1 ? it.points : 0;
+        it.checks = typeof it.checks === 'number' ? it.checks : 0;
+        it.lastMsg = '';   // feedback text is rebuilt, never restored as HTML
+      }
+      st.submitNote = typeof st.submitNote === 'string' ? st.submitNote : '';
       return true;
     }
     function save(immediate) {

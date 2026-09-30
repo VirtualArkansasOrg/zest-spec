@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review: Label the Plant Cell</title>
+  <script src="/public/zest-bridge.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #eaf2e4; color: #22302a; overflow: hidden;
+    }
+    button { font-family: inherit; }
+    #app { height: 100%; display: flex; flex-direction: column; max-width: 1240px; margin: 0 auto; }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px 8px; }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .logo {
+      width: 38px; height: 38px; border-radius: 11px; flex: none; background: linear-gradient(145deg, #43a047, #1b5e20);
+      display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(27, 94, 32, 0.3);
+    }
+    h1 { font-size: 19px; color: #1b5e20; line-height: 1.15; }
+    .sub { font-size: 12.5px; color: #5d6f63; margin-top: 1px; }
+    .who { display: flex; align-items: center; gap: 9px; background: #fff; border-radius: 999px; padding: 4px 14px 4px 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); min-width: 0; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: #7e57c2; color: #fff; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; flex: none; }
+    .who-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .who-date { font-size: 11.5px; color: #66756b; white-space: nowrap; }
+    .banner { margin: 0 16px 8px; padding: 7px 12px; border-radius: 10px; font-size: 13px; display: none; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .banner.show { display: flex; }
+    .banner.preview { background: #f1ecfb; color: #4a3a78; border: 1px solid #ddd2f3; }
+    .banner a { color: #5a3fb0; font-weight: 700; }
+    .banner .tabs { display: inline-flex; background: #fff; border-radius: 999px; padding: 2px; gap: 2px; }
+    .banner .tabs button { border: none; background: transparent; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 700; color: #5a4a8a; cursor: pointer; }
+    .banner .tabs button.on { background: #6a4fb3; color: #fff; }
+    .spacer { flex: 1; }
+
+    .main { flex: 1; min-height: 0; display: flex; gap: 12px; padding: 0 16px 14px; }
+    .left { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+    .side { width: 320px; flex: none; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .stage { position: relative; flex: 1; min-height: 0; border-radius: 16px; overflow: hidden; background: #fbfdf8; box-shadow: 0 2px 10px rgba(20, 60, 20, 0.12), inset 0 0 0 1px #dbe6d4; }
+    #board { width: 100%; height: 100%; display: block; }
+    .now {
+      position: absolute; left: 10px; top: 10px; background: rgba(27, 60, 32, 0.88); color: #fff; font-size: 12.5px; font-weight: 600;
+      padding: 5px 10px; border-radius: 9px; opacity: 0; transition: opacity 0.2s; pointer-events: none; max-width: 70%;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .now.show { opacity: 1; }
+    .final-tag { position: absolute; right: 10px; top: 10px; background: rgba(255,255,255,0.92); color: #2e7d32; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .final-tag.hide { display: none; }
+
+    /* Replay bar */
+    .replay { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 14px; padding: 7px 10px; box-shadow: 0 1px 4px rgba(20, 60, 20, 0.1); }
+    .play {
+      width: 44px; height: 44px; border-radius: 50%; border: none; background: #2e7d32; color: #fff; cursor: pointer; flex: none;
+      display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(46, 125, 50, 0.35);
+    }
+    .play:hover { background: #1b5e20; }
+    .play svg { width: 20px; height: 20px; }
+    .track { position: relative; flex: 1; min-width: 60px; height: 44px; }
+    .track input { position: absolute; left: 0; right: 0; top: 0; width: 100%; height: 44px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; z-index: 2; }
+    .track input:focus { outline: none; }
+    .track input::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: transparent; }
+    .track input::-moz-range-track { height: 6px; background: transparent; }
+    .track input::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid #2e7d32; margin-top: -6px; box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
+    .track input::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid #2e7d32; }
+    .rail { position: absolute; left: 9px; right: 9px; top: 19px; height: 6px; border-radius: 3px; background: #e2eadd; overflow: hidden; }
+    .fill { height: 100%; background: linear-gradient(90deg, #66bb6a, #2e7d32); width: 100%; }
+    .marks { position: absolute; left: 9px; right: 9px; top: 29px; height: 10px; pointer-events: none; }
+    .mk { position: absolute; top: 0; width: 7px; height: 7px; border-radius: 50%; margin-left: -3.5px; background: #2e7d32; }
+    .mk.er { background: #d62839; border-radius: 1px; transform: rotate(45deg); width: 6px; height: 6px; margin-left: -3px; }
+    .time { font-size: 13px; font-variant-numeric: tabular-nums; color: #3d4c43; white-space: nowrap; font-weight: 600; }
+    .time span { color: #8a988f; font-weight: 500; }
+    .speeds { display: flex; background: #eef3eb; border-radius: 9px; padding: 2px; flex: none; }
+    .speeds button { border: none; background: transparent; font-size: 12.5px; font-weight: 700; color: #4c5d52; padding: 0 9px; height: 32px; border-radius: 7px; cursor: pointer; }
+    .speeds button.on { background: #fff; color: #1b5e20; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+    .hint { font-size: 11.5px; color: #7b8a80; padding: 0 4px; }
+
+    .card { background: #fff; border-radius: 14px; padding: 12px 14px; box-shadow: 0 1px 4px rgba(20, 60, 20, 0.08); }
+    .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #5d6f63; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .stat { background: #f3f8f0; border-radius: 10px; padding: 7px 8px; text-align: center; }
+    .stat b { display: block; font-size: 18px; color: #1b5e20; line-height: 1.2; }
+    .stat span { font-size: 11px; color: #66756b; }
+    .q { font-size: 13px; font-weight: 700; color: #1b5e20; margin-bottom: 6px; }
+    .answer { font-size: 15px; line-height: 1.5; color: #22302a; border-left: 4px solid #81c784; padding: 4px 0 4px 11px; white-space: pre-wrap; word-wrap: break-word; }
+    .answer.empty { color: #9aa79f; font-style: italic; }
+    .wc { font-size: 11.5px; color: #7b8a80; margin-top: 6px; }
+    .count { font-size: 12px; font-weight: 800; color: #fff; background: #2e7d32; border-radius: 999px; padding: 2px 9px; letter-spacing: 0; }
+    .count.part { background: #f39c12; }
+    .checks { list-style: none; }
+    .checks li { display: flex; align-items: flex-start; gap: 9px; padding: 5px 0; border-bottom: 1px solid #f0f3ee; font-size: 14px; }
+    .checks li:last-child { border-bottom: none; }
+    .ic { width: 20px; height: 20px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+    .ic.yes { background: #2e7d32; }
+    .ic.no { background: #fdecea; }
+    .checks .nm { font-weight: 700; }
+    .checks .their { display: block; font-size: 12px; color: #66756b; }
+    .checks li.miss .nm { color: #b03a2e; }
+    .note { font-size: 11.5px; color: #7b8a80; margin-top: 8px; line-height: 1.4; }
+    .extra { font-size: 12.5px; color: #4c5d52; margin-top: 6px; }
+    .snap { width: 100%; border-radius: 10px; border: 1px solid #e1e9dc; display: block; }
+    .msg { padding: 40px 20px; text-align: center; color: #5d6f63; font-size: 15px; }
+
+    @media (max-width: 760px) {
+      body { overflow: auto; }
+      #app { height: auto; }
+      .top { flex-wrap: wrap; padding: 8px 10px; }
+      .banner { margin: 0 10px 8px; }
+      .main { flex-direction: column; padding: 0 10px 14px; }
+      .stage { flex: none; height: 0; padding-top: 75%; }
+      #board { position: absolute; left: 0; top: 0; }
+      .side { width: auto; overflow: visible; }
+      .replay { flex-wrap: wrap; gap: 6px 10px; }
+      .track { order: 5; flex-basis: 100%; }
+      .speeds { margin-left: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="top">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="10" cy="10" r="3"/><path d="M14 16h3"/></svg>
+        </div>
+        <div>
+          <h1>Label the Plant Cell</h1>
+          <div class="sub">Teacher review &middot; replay how the drawing was made</div>
+        </div>
+      </div>
+      <div class="who" id="who" style="display:none">
+        <div class="avatar" id="avatar">?</div>
+        <div style="min-width:0"><div class="who-name" id="who-name"></div><div class="who-date" id="who-date"></div></div>
+      </div>
+    </header>
+    <div class="banner preview" id="preview-banner">
+      <b>Sample submission (preview)</b>
+      <span id="preview-text">A made-up student, so you can try the replay. In SpeedGrader this shows the real student&rsquo;s work.</span>
+      <span class="spacer"></span>
+      <span class="tabs" id="tabs" style="display:none"><button data-src="mine" class="on">Your drawing</button><button data-src="sample">Avery&rsquo;s sample</button></span>
+      <a href="index.html" id="back-link">&larr; Back to the activity</a>
+    </div>
+
+    <main class="main" id="main">
+      <section class="left">
+        <div class="stage">
+          <svg id="board" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The student's labelled plant cell">
+            <defs><pattern id="pDots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1.1" fill="#dbe7d1"/></pattern><linearGradient id="gWall" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d4eaa8"/><stop offset="1" stop-color="#98c463"/></linearGradient><radialGradient id="gCyto" cx="0.45" cy="0.4" r="0.75"><stop offset="0" stop-color="#fbfdf1"/><stop offset="1" stop-color="#e3f1c8"/></radialGradient><radialGradient id="gVac" cx="0.38" cy="0.3" r="0.8"><stop offset="0" stop-color="#f3faff"/><stop offset="1" stop-color="#c9e4f4"/></radialGradient><radialGradient id="gNuc" cx="0.4" cy="0.35" r="0.7"><stop offset="0" stop-color="#efe6fa"/><stop offset="1" stop-color="#bb9fdd"/></radialGradient><linearGradient id="gChl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9ad986"/><stop offset="1" stop-color="#2f8b3f"/></linearGradient><linearGradient id="gMit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe0bf"/><stop offset="1" stop-color="#f09a5c"/></linearGradient><filter id="fShadow" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#2e5a1c" flood-opacity="0.2"/></filter><g id="chl"><ellipse rx="20" ry="10" fill="url(#gChl)" stroke="#23702f" stroke-width="1.5"/><path d="M-16 0H16" stroke="#c7ecb0" stroke-width="1.2" opacity="0.8"/><g fill="#1d662b" opacity="0.8"><rect x="-13" y="-4.5" width="4" height="9" rx="1"/><rect x="-5.5" y="-5" width="4" height="10" rx="1"/><rect x="2" y="-5" width="4" height="10" rx="1"/><rect x="9.5" y="-4" width="3.5" height="8" rx="1"/></g></g><g id="mit"><ellipse rx="15" ry="7.5" fill="url(#gMit)" stroke="#c0692c" stroke-width="1.5"/><path d="M-10 0l3-4 3 8 3-8 3 8 3-8 3 8 2-4" fill="none" stroke="#c0692c" stroke-width="1.2" stroke-linejoin="round"/></g></defs>
+            <g id="diagram"><rect width="800" height="600" fill="#fbfdf8"/><rect width="800" height="600" fill="url(#pDots)"/><rect x="190" y="70" width="420" height="460" rx="34" fill="url(#gWall)" stroke="#5b8c32" stroke-width="3" filter="url(#fShadow)"/><rect x="196.5" y="76.5" width="407" height="447" rx="29" fill="none" stroke="#b9dc8a" stroke-width="1.2" opacity="0.9"/><rect x="204" y="84" width="392" height="432" rx="24" fill="url(#gCyto)" stroke="#3f7a2b" stroke-width="2.5"/><g fill="#7a9656" opacity="0.75"><circle cx="214" cy="473.4" r="1.9"/><circle cx="321.6" cy="180.7" r="1.9"/><circle cx="557.1" cy="426.7" r="1.9"/><circle cx="557.4" cy="377.7" r="1.9"/><circle cx="552.1" cy="116.6" r="1.9"/><circle cx="509.6" cy="455.6" r="1.9"/><circle cx="255.3" cy="431.5" r="1.9"/><circle cx="271.1" cy="126.1" r="1.9"/><circle cx="265.3" cy="473.8" r="1.9"/><circle cx="543.1" cy="460.9" r="1.9"/><circle cx="242.3" cy="94.7" r="1.9"/><circle cx="542.1" cy="190.9" r="1.9"/><circle cx="353.1" cy="462.4" r="1.9"/><circle cx="284" cy="493.1" r="1.9"/><circle cx="233.5" cy="411" r="1.9"/><circle cx="262.6" cy="377.4" r="1.9"/><circle cx="583.3" cy="487.2" r="1.9"/><circle cx="555.6" cy="176.2" r="1.9"/><circle cx="289.4" cy="391.8" r="1.9"/><circle cx="520.1" cy="471.2" r="1.9"/><circle cx="227.8" cy="150" r="1.9"/><circle cx="243.9" cy="138.6" r="1.9"/><circle cx="439.1" cy="483.6" r="1.9"/><circle cx="289.2" cy="372.1" r="1.9"/><circle cx="315.5" cy="360.4" r="1.9"/><circle cx="367.8" cy="131.6" r="1.9"/><circle cx="301.1" cy="474.7" r="1.9"/><circle cx="347.1" cy="126.6" r="1.9"/><circle cx="511" cy="136.9" r="1.9"/><circle cx="361" cy="171.3" r="1.9"/><circle cx="540.4" cy="141.8" r="1.9"/><circle cx="447.1" cy="100.6" r="1.9"/><circle cx="337.2" cy="388.5" r="1.9"/><circle cx="569.3" cy="319.7" r="1.9"/></g><path d="M372 150C450 132 534 146 548 205C562 265 558 385 538 430C516 468 440 472 390 458C350 446 336 392 340 332C344 272 330 172 372 150Z" fill="url(#gVac)" stroke="#6fa7c9" stroke-width="2.5"/><path d="M392 176C440 160 500 166 516 204" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity="0.7"/><g fill="none" stroke="#d38bb0" stroke-width="3.5" stroke-linecap="round"><path d="M222 252C250 268 290 262 318 238"/><path d="M226 270C258 288 300 280 322 258"/><path d="M234 288C262 304 298 300 318 282"/></g><g fill="#8a4468"><circle cx="228.9" cy="252.4" r="1.8"/><circle cx="242" cy="256.4" r="1.8"/><circle cx="255.8" cy="257.9" r="1.8"/><circle cx="270" cy="257" r="1.8"/><circle cx="284.2" cy="253.7" r="1.8"/><circle cx="298" cy="248.2" r="1.8"/><circle cx="311.1" cy="240.4" r="1.8"/><circle cx="233.9" cy="276.8" r="1.8"/><circle cx="248.3" cy="281.2" r="1.8"/><circle cx="263" cy="282.9" r="1.8"/><circle cx="277.8" cy="282" r="1.8"/><circle cx="291.9" cy="278.8" r="1.8"/><circle cx="304.9" cy="273.4" r="1.8"/><circle cx="316.4" cy="266" r="1.8"/><circle cx="240.9" cy="288.5" r="1.8"/><circle cx="253.4" cy="292.7" r="1.8"/><circle cx="266.2" cy="294.8" r="1.8"/><circle cx="279" cy="294.8" r="1.8"/><circle cx="291.3" cy="292.7" r="1.8"/><circle cx="302.7" cy="288.8" r="1.8"/><circle cx="312.9" cy="283" r="1.8"/></g><circle cx="262" cy="190" r="44" fill="url(#gNuc)" stroke="#7a55a8" stroke-width="3"/><circle cx="262" cy="190" r="39.5" fill="none" stroke="#7a55a8" stroke-width="1" opacity="0.55" stroke-dasharray="14 3"/><g fill="none" stroke="#9b7cc4" stroke-width="1.3" stroke-linecap="round" opacity="0.7"><path d="M240 170q6-6 12 0t12 0"/><path d="M270 214q5 5 10 0t10 0"/><path d="M276 168q4 6 10 4"/><path d="M236 208q5-3 9 2"/></g><circle cx="252" cy="196" r="13" fill="#6b4497"/><circle cx="248" cy="192" r="4" fill="#8d68b8" opacity="0.8"/><use href="#chl" transform="translate(300 110) rotate(-8)"/><use href="#chl" transform="translate(410 112) rotate(-4)"/><use href="#chl" transform="translate(492 110) rotate(6)"/><use href="#chl" transform="translate(566 142) rotate(55)"/><use href="#chl" transform="translate(577 252) rotate(88)"/><use href="#chl" transform="translate(578 348) rotate(92)"/><use href="#chl" transform="translate(570 452) rotate(55)"/><use href="#chl" transform="translate(492 492) rotate(3)"/><use href="#chl" transform="translate(412 494) rotate(-3)"/><use href="#chl" transform="translate(330 480) rotate(-20)"/><use href="#chl" transform="translate(238 372) rotate(78)"/><use href="#mit" transform="translate(354 100) rotate(5)"/><use href="#mit" transform="translate(285 330) rotate(-30)"/><use href="#mit" transform="translate(318 405) rotate(60)"/><use href="#mit" transform="translate(250 452) rotate(15)"/><use href="#mit" transform="translate(540 497) rotate(-20)"/><use href="#mit" transform="translate(576 196) rotate(84)"/></g>
+            <g id="ink"></g>
+            <g id="cursor"></g>
+          </svg>
+          <div class="now" id="now"></div>
+          <div class="final-tag" id="final-tag">Finished drawing</div>
+        </div>
+        <div class="replay" id="replay">
+          <button class="play" id="play" aria-label="Play replay" title="Play replay"></button>
+          <div class="time" id="time">0:00 <span>/ 0:00</span></div>
+          <div class="track">
+            <div class="rail"><div class="fill" id="fill"></div></div>
+            <div class="marks" id="marks"></div>
+            <input type="range" id="scrub" min="0" max="1000" value="1000" step="1" aria-label="Replay position">
+          </div>
+          <div class="speeds" id="speeds" role="group" aria-label="Replay speed">
+            <button data-speed="1">1x</button><button data-speed="2" class="on">2x</button><button data-speed="4">4x</button>
+          </div>
+        </div>
+        <div class="hint">Long pauses are shortened in the replay; the clock shows the student&rsquo;s real time. Dots mark labels, red marks show erasing.</div>
+      </section>
+
+      <aside class="side" id="side">
+        <div class="card"><div class="msg">Loading submission&hellip;</div></div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // ---- Shared drawing model (same code in index.html and review.html) ----
+      // Event log: ['a', t, item] add, ['d', t, [ids]] erase, ['r', t, [ids]] restore,
+      // ['m', t, id, x, y] move label, ['e', t, id, text] edit label. t = ms of activity time.
+      // Items: pen {id,k:'pen',c,w,t,p:[x,y,dt,...]}, arrow {id,k:'arrow',c,w,t,d,x1,y1,x2,y2},
+      // label {id,k:'label',c,t,x,y,s}. Coordinates are in the 800x600 diagram space.
+      var VW = 800, VH = 600;
+      var LABEL_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+
+      function safeColor(c) {
+        return /^#[0-9a-fA-F]{3,8}$/.test(String(c)) ? c : '#1f2a37';
+      }
+
+      function num(n, d) {
+        n = Number(n);
+        return isFinite(n) ? n : (d || 0);
+      }
+
+      function penPath(p, n) {
+        if (n < 1) return '';
+        var d = 'M' + num(p[0]) + ' ' + num(p[1]);
+        if (n === 1) return d + 'l0.01 0';
+        var i;
+        for (i = 1; i < n - 1; i++) {
+          var x = num(p[i * 3]), y = num(p[i * 3 + 1]);
+          var nx = num(p[(i + 1) * 3]), ny = num(p[(i + 1) * 3 + 1]);
+          d += 'Q' + x + ' ' + y + ' ' + ((x + nx) / 2) + ' ' + ((y + ny) / 2);
+        }
+        d += 'L' + num(p[(n - 1) * 3]) + ' ' + num(p[(n - 1) * 3 + 1]);
+        return d;
+      }
+
+      function arrowSvg(x1, y1, x2, y2, c, w, extra) {
+        var dx = x2 - x1, dy = y2 - y1, len = Math.sqrt(dx * dx + dy * dy);
+        if (len < 1) return '';
+        var ux = dx / len, uy = dy / len;
+        var hl = Math.min(12 + w * 2.2, len * 0.9), hw = hl * 0.55;
+        var bx = x2 - ux * hl, by = y2 - uy * hl;
+        var sx = x2 - ux * hl * 0.7, sy = y2 - uy * hl * 0.7;
+        var r = function (v) { return Math.round(v * 10) / 10; };
+        return '<g' + (extra || '') + '><line x1="' + r(x1) + '" y1="' + r(y1) + '" x2="' + r(sx) + '" y2="' + r(sy) +
+          '" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="round"/>' +
+          '<path d="M' + r(x2) + ' ' + r(y2) + 'L' + r(bx - uy * hw) + ' ' + r(by + ux * hw) + 'L' + r(bx + uy * hw) + ' ' + r(by - ux * hw) +
+          'Z" fill="' + c + '" stroke="' + c + '" stroke-width="2" stroke-linejoin="round"/></g>';
+      }
+
+      function labelSvg(id, x, y, s, c, extra) {
+        return '<text data-id="' + id + '" x="' + num(x) + '" y="' + (num(y) + 8.5) + '" text-anchor="middle" font-family="' + esc(LABEL_FONT) +
+          '" font-size="24" font-weight="700" fill="' + c + '" stroke="#ffffff" stroke-width="5" stroke-linejoin="round" paint-order="stroke"' +
+          (extra || '') + '>' + esc(s) + '</text>';
+      }
+
+      function sortLog(log) {
+        // stable sort by time
+        var a = [], i;
+        for (i = 0; i < log.length; i++) if (log[i] && log[i].length >= 2) a.push({ i: i, op: log[i] });
+        a.sort(function (p, q) { return (num(p.op[1]) - num(q.op[1])) || (p.i - q.i); });
+        var out = [];
+        for (i = 0; i < a.length; i++) out.push(a[i].op);
+        return out;
+      }
+
+      // Fold the log up to time T (Infinity = everything) into { live: id -> {it,on,x,y,s}, order: [ids] }
+      function foldLog(log, T) {
+        var live = {}, order = [], i, j, op, ids, L;
+        if (T === undefined) T = Infinity;
+        for (i = 0; i < log.length; i++) {
+          op = log[i];
+          if (!op || num(op[1]) > T) continue;
+          if (op[0] === 'a' && op[2] && op[2].id != null) {
+            var it = op[2];
+            if (!live[it.id]) order.push(it.id);
+            live[it.id] = { it: it, on: true, x: it.x, y: it.y, s: it.s };
+          } else if (op[0] === 'd' || op[0] === 'r') {
+            ids = op[2] || [];
+            for (j = 0; j < ids.length; j++) if (live[ids[j]]) live[ids[j]].on = (op[0] === 'r');
+          } else if (op[0] === 'm') {
+            L = live[op[2]];
+            if (L) { L.x = op[3]; L.y = op[4]; }
+          } else if (op[0] === 'e') {
+            L = live[op[2]];
+            if (L) L.s = op[3];
+          }
+        }
+        return { live: live, order: order };
+      }
+
+      // SVG for the folded drawing at time T (pens and arrows drawn partially while in progress)
+      function inkSvg(fold, T) {
+        var out = [], i, L, it, c;
+        if (T === undefined) T = Infinity;
+        for (i = 0; i < fold.order.length; i++) {
+          L = fold.live[fold.order[i]];
+          if (!L || !L.on) continue;
+          it = L.it;
+          c = safeColor(it.c);
+          if (it.k === 'pen' && it.p) {
+            var n = Math.floor(it.p.length / 3);
+            if (T !== Infinity) {
+              var m = 0;
+              while (m < n && num(it.t) + num(it.p[m * 3 + 2]) <= T) m++;
+              n = m;
+            }
+            if (n > 0) out.push('<path data-id="' + it.id + '" d="' + penPath(it.p, n) + '" fill="none" stroke="' + c +
+              '" stroke-width="' + num(it.w, 3) + '" stroke-linecap="round" stroke-linejoin="round"/>');
+          } else if (it.k === 'arrow') {
+            var f = 1;
+            if (T !== Infinity && num(it.d) > 0) f = Math.max(0, Math.min(1, (T - num(it.t)) / num(it.d)));
+            var x1 = num(it.x1), y1 = num(it.y1);
+            out.push(arrowSvg(x1, y1, x1 + (num(it.x2) - x1) * f, y1 + (num(it.y2) - y1) * f, c, num(it.w, 3), ' data-id="' + it.id + '"'));
+          } else if (it.k === 'label') {
+            out.push(labelSvg(it.id, L.x, L.y, L.s, c));
+          }
+        }
+        return out.join('');
+      }
+
+      function liveLabels(fold) {
+        var out = [], i, L;
+        for (i = 0; i < fold.order.length; i++) {
+          L = fold.live[fold.order[i]];
+          if (L && L.on && L.it.k === 'label' && String(L.s || '').replace(/\s+/g, '')) out.push({ id: L.it.id, s: String(L.s), x: L.x, y: L.y });
+        }
+        return out;
+      }
+
+      // ---- Fuzzy matching of part names (case-insensitive, plurals, small typos) ----
+      var PLURALS = { mitochondria: 'mitochondrion', nuclei: 'nucleus', vacuoles: 'vacuole', chloroplasts: 'chloroplast',
+        ribosomes: 'ribosome', walls: 'wall', membranes: 'membrane', nucleoli: 'nucleolus', vesicles: 'vesicle' };
+      var VARIANTS = { mitochondrion: ['mitochondria'], nucleus: ['nuclei'], nucleolus: ['nucleoli'] };
+      var STOP = { the: 1, a: 1, an: 1, of: 1, and: 1 };
+
+      function normWord(w) {
+        w = w.toLowerCase();
+        if (PLURALS[w]) return PLURALS[w];
+        if (w.length > 4 && w.charAt(w.length - 1) === 's' && !/(ss|us|is)$/.test(w)) return w.slice(0, -1);
+        return w;
+      }
+
+      function tokens(s) {
+        var raw = String(s || '').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/), out = [], i;
+        for (i = 0; i < raw.length; i++) if (raw[i] && !STOP[raw[i]]) out.push(normWord(raw[i]));
+        return out;
+      }
+
+      function lev(a, b) {
+        var m = a.length, n = b.length, prev = [], cur, i, j;
+        for (j = 0; j <= n; j++) prev.push(j);
+        for (i = 1; i <= m; i++) {
+          cur = [i];
+          for (j = 1; j <= n; j++) {
+            cur.push(Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1)));
+          }
+          prev = cur;
+        }
+        return prev[n];
+      }
+
+      function tokMatch(p, l) {
+        var cands = [p].concat(VARIANTS[p] || []), i;
+        for (i = 0; i < cands.length; i++) {
+          var a = cands[i];
+          if (a === l) return true;
+          var L = Math.max(a.length, l.length), tol = L >= 10 ? 2 : (L >= 5 ? 1 : 0);
+          if (tol && Math.abs(a.length - l.length) <= tol && lev(a, l) <= tol) return true;
+        }
+        return false;
+      }
+
+      function partMatches(part, label) {
+        var pt = tokens(part), lt = tokens(label), i, j, ok;
+        if (pt.length > 1) {
+          var rest = [];
+          for (i = 0; i < pt.length; i++) if (pt[i] !== 'cell') rest.push(pt[i]);
+          if (rest.length) pt = rest;
+        }
+        if (!pt.length || !lt.length) return false;
+        for (i = 0; i < pt.length; i++) {
+          ok = false;
+          for (j = 0; j < lt.length; j++) if (tokMatch(pt[i], lt[j])) { ok = true; break; }
+          if (!ok) return false;
+        }
+        return true;
+      }
+
+      function parseParts(s) {
+        var raw = String(s || '').split(','), out = [], seen = {}, i, p;
+        for (i = 0; i < raw.length && out.length < 14; i++) {
+          p = raw[i].replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '').slice(0, 40);
+          if (p && !seen[p.toLowerCase()]) { seen[p.toLowerCase()] = 1; out.push(p); }
+        }
+        return out;
+      }
+
+      // For each part, the first label text that names it (or null)
+      function checkParts(parts, labels) {
+        var out = [], i, j, hit;
+        for (i = 0; i < parts.length; i++) {
+          hit = null;
+          for (j = 0; j < labels.length; j++) if (partMatches(parts[i], labels[j].s)) { hit = labels[j]; break; }
+          out.push({ part: parts[i], label: hit ? hit.s : null });
+        }
+        return out;
+      }
+
+      function fmtTime(ms) {
+        var s = Math.max(0, Math.round(num(ms) / 1000)), m = Math.floor(s / 60);
+        s = s % 60;
+        return m + ':' + (s < 10 ? '0' : '') + s;
+      }
+
+      function fmtDuration(ms) {
+        var s = Math.max(0, Math.round(num(ms) / 1000)), m = Math.floor(s / 60);
+        if (m === 0) return s + 's';
+        return m + 'm ' + (s % 60) + 's';
+      }
+      // ---- end shared ----
+
+
+      var DEFAULT_PARTS = 'cell wall, cell membrane, nucleus, chloroplast, vacuole, mitochondrion';
+      var DEFAULT_QUESTION = 'What does the chloroplast do?';
+      var PREVIEW_KEY = 'sketch-label-preview';
+      function byId(id) { return document.getElementById(id); }
+
+      var inkG = byId('ink'), cursorG = byId('cursor'), scrub = byId('scrub');
+      var shown = false;
+      var R = null; // replay data: { log, knotsR, knotsC, totalC, totalR, events }
+      var compNow = 0, playing = false, speed = 2, lastFrame = 0, rafId = null;
+
+      var ICON_PLAY = '<svg viewBox="0 0 24 24" fill="#fff"><path d="M8 5.5v13a1 1 0 0 0 1.5.9l10.2-6.5a1 1 0 0 0 0-1.7L9.5 4.6A1 1 0 0 0 8 5.5z"/></svg>';
+      var ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4.5" height="14" rx="1.2"/><rect x="13.5" y="5" width="4.5" height="14" rx="1.2"/></svg>';
+      var ICON_AGAIN = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v5h5"/></svg>';
+
+      // ---- timeline with long pauses shortened ----
+      function buildReplay(log) {
+        log = sortLog(log || []);
+        var times = [0], i, j, op, it, events = [];
+        for (i = 0; i < log.length; i++) {
+          op = log[i];
+          var t = num(op[1]);
+          times.push(t);
+          if (op[0] === 'a' && op[2]) {
+            it = op[2];
+            if (it.k === 'pen' && it.p) {
+              for (j = 2; j < it.p.length; j += 3) times.push(num(it.t) + num(it.p[j]));
+              events.push({ t: t, kind: 'pen', text: 'Drawing with the pen' });
+            } else if (it.k === 'arrow') {
+              times.push(num(it.t) + num(it.d));
+              events.push({ t: t, kind: 'arrow', text: 'Drawing an arrow' });
+            } else if (it.k === 'label') {
+              events.push({ t: t, kind: 'label', text: 'Labelled “' + String(it.s || '') + '”', c: it.c });
+            }
+          } else if (op[0] === 'd') {
+            events.push({ t: t, kind: 'erase', text: 'Erased ' + (op[2] && op[2].length > 1 ? op[2].length + ' marks' : 'a mark') });
+          } else if (op[0] === 'r') {
+            events.push({ t: t, kind: 'restore', text: 'Undo' });
+          } else if (op[0] === 'm') {
+            events.push({ t: t, kind: 'move', text: 'Moved a label' });
+          } else if (op[0] === 'e') {
+            events.push({ t: t, kind: 'edit', text: 'Changed a label to “' + String(op[3] || '') + '”' });
+          }
+        }
+        times.sort(function (a, b) { return a - b; });
+        var kr = [0], kc = [0], last = 0;
+        for (i = 0; i < times.length; i++) {
+          var g = times[i] - last;
+          if (g <= 0) continue;
+          kr.push(times[i]);
+          kc.push(kc[kc.length - 1] + Math.min(g, i === 1 ? 900 : 1200));
+          last = times[i];
+        }
+        kr.push(last + 800); kc.push(kc[kc.length - 1] + 800);
+        return { log: log, kr: kr, kc: kc, totalC: kc[kc.length - 1], lastR: last, events: events };
+      }
+
+      function realFromComp(c) {
+        var kr = R.kr, kc = R.kc, lo = 0, hi = kc.length - 1;
+        if (c <= 0) return 0;
+        if (c >= kc[hi]) return kr[hi];
+        while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (kc[mid] <= c) lo = mid; else hi = mid; }
+        var f = (c - kc[lo]) / ((kc[hi] - kc[lo]) || 1);
+        return kr[lo] + f * (kr[hi] - kr[lo]);
+      }
+      function compFromReal(r) {
+        var kr = R.kr, kc = R.kc, i;
+        for (i = 1; i < kr.length; i++) if (kr[i] >= r) {
+          var f = (r - kr[i - 1]) / ((kr[i] - kr[i - 1]) || 1);
+          return kc[i - 1] + f * (kc[i] - kc[i - 1]);
+        }
+        return kc[kc.length - 1];
+      }
+
+      // ---- drawing at a point in time ----
+      function drawAt(c) {
+        var atEnd = c >= R.totalC;
+        var T = atEnd ? Infinity : realFromComp(c);
+        var fold = foldLog(R.log, T);
+        inkG.innerHTML = inkSvg(fold, T);
+        // pen-tip cursor while a stroke or arrow is being drawn
+        var cur = '', i, L, it;
+        if (!atEnd) {
+          for (i = fold.order.length - 1; i >= 0; i--) {
+            L = fold.live[fold.order[i]]; it = L.it;
+            if (!L.on) continue;
+            if (it.k === 'pen' && it.p && it.p.length >= 3) {
+              var endT = num(it.t) + num(it.p[it.p.length - 1]);
+              if (T <= endT + 120) {
+                var n = 0; while (n < it.p.length / 3 && num(it.t) + num(it.p[n * 3 + 2]) <= T) n++;
+                n = Math.max(1, n);
+                cur = tip(it.p[(n - 1) * 3], it.p[(n - 1) * 3 + 1], it.c);
+              }
+              break;
+            } else if (it.k === 'arrow') {
+              if (T <= num(it.t) + num(it.d) + 120) {
+                var f = num(it.d) > 0 ? Math.max(0, Math.min(1, (T - num(it.t)) / num(it.d))) : 1;
+                cur = tip(num(it.x1) + (num(it.x2) - num(it.x1)) * f, num(it.y1) + (num(it.y2) - num(it.y1)) * f, it.c);
+              }
+              break;
+            } else if (it.k === 'label') {
+              if (T - num(it.t) < 700) cur = '<circle cx="' + num(L.x) + '" cy="' + num(L.y) + '" r="' + (18 + (T - num(it.t)) / 25) + '" fill="none" stroke="#2e7d32" stroke-width="3" opacity="' + Math.max(0, 1 - (T - num(it.t)) / 700).toFixed(2) + '"/>';
+              break;
+            }
+          }
+        }
+        cursorG.innerHTML = cur;
+        // caption for the most recent action
+        var cap = '';
+        if (!atEnd && (playing || c > 0)) {
+          for (i = R.events.length - 1; i >= 0; i--) if (R.events[i].t <= T) { if (T - R.events[i].t < 2500) cap = R.events[i].text; break; }
+        }
+        var nowEl = byId('now');
+        if (cap) { nowEl.textContent = cap; nowEl.className = 'now show'; } else nowEl.className = 'now';
+        byId('final-tag').className = 'final-tag' + (atEnd ? '' : ' hide');
+        var shownR = atEnd ? totalReal() : T;
+        byId('time').innerHTML = fmtTime(shownR) + ' <span>/ ' + fmtTime(totalReal()) + '</span>';
+        var pct = R.totalC ? Math.min(1, c / R.totalC) : 1;
+        scrub.value = Math.round(pct * 1000);
+        byId('fill').style.width = (pct * 100) + '%';
+      }
+      function tip(x, y, c) {
+        return '<circle cx="' + num(x) + '" cy="' + num(y) + '" r="9" fill="' + safeColor(c) + '" opacity="0.22"/><circle cx="' + num(x) + '" cy="' + num(y) + '" r="4" fill="#fff" stroke="' + safeColor(c) + '" stroke-width="2.5"/>';
+      }
+      var currentArt = null;
+      function totalReal() { return Math.max(R.lastR, 0); }
+
+      function setPlayIcon() {
+        var b = byId('play');
+        if (!R) return;
+        if (playing) { b.innerHTML = ICON_PAUSE; b.setAttribute('aria-label', 'Pause'); b.title = 'Pause'; }
+        else if (compNow >= R.totalC) { b.innerHTML = ICON_AGAIN; b.setAttribute('aria-label', 'Replay from the start'); b.title = 'Replay from the start'; }
+        else { b.innerHTML = ICON_PLAY; b.setAttribute('aria-label', 'Play'); b.title = 'Play'; }
+      }
+
+      function frame(ts) {
+        if (!playing) return;
+        var dt = lastFrame ? Math.min(100, ts - lastFrame) : 16;
+        lastFrame = ts;
+        compNow = Math.min(R.totalC, compNow + dt * speed);
+        drawAt(compNow);
+        if (compNow >= R.totalC) { playing = false; setPlayIcon(); return; }
+        rafId = requestAnimationFrame(frame);
+      }
+      function play() {
+        if (!R) return;
+        if (compNow >= R.totalC) compNow = 0;
+        playing = true; lastFrame = 0; setPlayIcon();
+        rafId = requestAnimationFrame(frame);
+      }
+      function pause() {
+        playing = false;
+        if (rafId) cancelAnimationFrame(rafId);
+        setPlayIcon();
+      }
+      byId('play').addEventListener('click', function () { if (playing) pause(); else play(); });
+      scrub.addEventListener('input', function () {
+        if (!R) return;
+        if (playing) pause();
+        compNow = (+scrub.value / 1000) * R.totalC;
+        drawAt(compNow);
+        setPlayIcon();
+      });
+      byId('speeds').addEventListener('click', function (e) {
+        var b = e.target, list = this.querySelectorAll('button'), i;
+        if (!b.getAttribute || !b.getAttribute('data-speed')) return;
+        speed = +b.getAttribute('data-speed');
+        for (i = 0; i < list.length; i++) list[i].className = list[i] === b ? 'on' : '';
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === ' ' && e.target === document.body) { e.preventDefault(); if (playing) pause(); else play(); }
+      });
+
+      function renderMarks() {
+        var html = '', i, ev;
+        for (i = 0; i < R.events.length; i++) {
+          ev = R.events[i];
+          if (ev.kind !== 'label' && ev.kind !== 'erase') continue;
+          var pct = R.totalC ? compFromReal(ev.t) / R.totalC * 100 : 0;
+          html += '<span class="mk' + (ev.kind === 'erase' ? ' er' : '') + '" style="left:' + pct.toFixed(2) + '%"' +
+            (ev.kind === 'label' ? ' title="' + esc(ev.text) + '"' : '') + '></span>';
+        }
+        byId('marks').innerHTML = html;
+      }
+
+      // ---- side panel ----
+      function initials(name) {
+        var p = String(name || 'Student').replace(/[^A-Za-z\s]/g, ' ').replace(/^\s+|\s+$/g, '').split(/\s+/);
+        return ((p[0] || '?').charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '')).toUpperCase();
+      }
+
+      function renderSide(art) {
+        var parts = (art.parts && art.parts.length) ? parseParts(art.parts.join(',')) : null, src = 'as the student saw them';
+        if (!parts) { parts = parseParts(DEFAULT_PARTS); src = 'default list'; }
+        var question = String(art.question || DEFAULT_QUESTION);
+        var fold = foldLog(R.log);
+        var labels = liveLabels(fold);
+        var res = checkParts(parts, labels), n = 0, i;
+        for (i = 0; i < res.length; i++) if (res[i].label) n++;
+        var counts = { pen: 0, arrow: 0, label: 0, erased: 0 }, L;
+        for (i = 0; i < fold.order.length; i++) { L = fold.live[fold.order[i]]; if (L.on) counts[L.it.k] = (counts[L.it.k] || 0) + 1; else counts.erased++; }
+        var ans = String(art.answer || '');
+        var words = ans.replace(/^\s+|\s+$/g, '') ? ans.replace(/^\s+|\s+$/g, '').split(/\s+/).length : 0;
+
+        var html = '';
+        html += '<div class="card"><h2>At a glance</h2><div class="stats">' +
+          '<div class="stat"><b>' + esc(fmtDuration(art.timeSpentMs != null ? art.timeSpentMs : R.lastR)) + '</b><span>time spent</span></div>' +
+          '<div class="stat"><b>' + counts.label + '</b><span>labels</span></div>' +
+          '<div class="stat"><b>' + counts.arrow + '</b><span>arrows</span></div>' +
+          '</div><div class="extra">' + counts.pen + ' pen stroke' + (counts.pen === 1 ? '' : 's') + ' &middot; ' + counts.erased + ' erased</div></div>';
+
+        html += '<div class="card"><h2>Explanation</h2><div class="q">' + esc(question) + '</div>' +
+          '<div class="answer' + (words ? '' : ' empty') + '">' + (words ? esc(ans) : 'No answer') + '</div>' +
+          (words ? '<div class="wc">' + words + ' word' + (words === 1 ? '' : 's') + '</div>' : '') + '</div>';
+
+        html += '<div class="card"><h2>Parts labelled <span class="count' + (n === parts.length ? '' : ' part') + '">' + n + ' / ' + parts.length + '</span></h2><ul class="checks">';
+        for (i = 0; i < res.length; i++) {
+          var ok = !!res[i].label;
+          html += '<li class="' + (ok ? '' : 'miss') + '"><span class="ic ' + (ok ? 'yes' : 'no') + '">' +
+            (ok ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
+                : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="3.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>') +
+            '</span><span><span class="nm">' + esc(res[i].part) + '</span><span class="their">' +
+            (ok ? 'labelled &ldquo;' + esc(res[i].label) + '&rdquo;' : 'no matching label') + '</span></span></li>';
+        }
+        html += '</ul>';
+        var extras = [], j, k, used;
+        for (j = 0; j < labels.length; j++) {
+          used = false;
+          for (k = 0; k < res.length; k++) if (res[k].label === labels[j].s) used = true;
+          if (!used) extras.push('&ldquo;' + esc(labels[j].s) + '&rdquo;');
+        }
+        if (extras.length) html += '<div class="extra">Other labels: ' + extras.join(', ') + '</div>';
+        html += '<div class="note">Names are matched ignoring capitals, plurals and small spelling slips (' + esc(src) + '). Use the replay to check each arrow points to the right part.</div></div>';
+
+        if (!R.log.length && art.snapshot && /^data:image\/(png|jpeg);base64,[A-Za-z0-9+\/=]+$/.test(art.snapshot)) {
+          html += '<div class="card"><h2>Snapshot</h2><img class="snap" alt="Snapshot of the drawing" src="' + art.snapshot + '"></div>';
+        }
+        byId('side').innerHTML = html;
+      }
+
+      function show(art, meta) {
+        pause();
+        art = art && typeof art === 'object' ? art : {};
+        currentArt = art;
+        R = buildReplay(art.events || []);
+        compNow = R.totalC;
+        renderMarks();
+        drawAt(compNow);
+        setPlayIcon();
+        renderSide(art);
+        byId('who').style.display = 'flex';
+        byId('who-name').textContent = meta.name || 'Student';
+        byId('avatar').textContent = initials(meta.name);
+        byId('who-date').textContent = meta.date ? 'Submitted ' + new Date(meta.date).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+      }
+
+      function showMessage(msg) {
+        byId('side').innerHTML = '<div class="card"><div class="msg">' + esc(msg) + '</div></div>';
+        byId('replay').style.display = 'none';
+      }
+
+      // ---- live review (SpeedGrader) ----
+      Zest.onReady(function () {
+        if (shown === 'live') return;
+        shown = 'live';
+        byId('preview-banner').className = 'banner preview';
+        if (!Zest.isReviewMode()) { showMessage('This page is only available in SpeedGrader review mode.'); return; }
+        var sub = Zest.getSubmission();
+        if (!sub || !sub.artifacts) { inkG.innerHTML = ''; showMessage('No submission yet from this student.'); return; }
+        byId('replay').style.display = '';
+        show(sub.artifacts, { name: sub.userName || 'Student', date: sub.submittedAt });
+      });
+
+      // ---- preview: sample submission (or the visitor's own preview drawing) ----
+      setTimeout(function () {
+        if (shown || Zest.isReady()) return;
+        shown = 'preview';
+        var mine = null;
+        try { var raw = sessionStorage.getItem(PREVIEW_KEY); if (raw) mine = JSON.parse(raw); } catch (e) { mine = null; }
+        byId('preview-banner').className = 'banner preview show';
+        if (mine && mine.artifacts) {
+          byId('tabs').style.display = 'inline-flex';
+          showMine();
+          byId('tabs').addEventListener('click', function (e) {
+            var s = e.target.getAttribute && e.target.getAttribute('data-src');
+            if (!s) return;
+            var b = this.querySelectorAll('button'), i;
+            for (i = 0; i < b.length; i++) b[i].className = b[i] === e.target ? 'on' : '';
+            if (s === 'mine') showMine(); else showSample();
+          });
+        } else {
+          showSample();
+        }
+        function showMine() {
+          byId('preview-banner').querySelector('b').textContent = 'Your preview drawing';
+          byId('preview-text').textContent = 'What your teacher sees in SpeedGrader. Press play to watch it rebuild.';
+          show(mine.artifacts, { name: 'You (preview)', date: mine.submittedAt });
+        }
+        function showSample() {
+          byId('preview-banner').querySelector('b').textContent = 'Sample submission (preview)';
+          byId('preview-text').textContent = 'A made-up student, so you can try the replay. In SpeedGrader this shows the real student’s work.';
+          show(makeSample(), { name: 'Avery Student', date: '2026-10-01T14:37:00' });
+        }
+      }, 1200);
+
+      // A realistic pre-recorded attempt by a made-up student.
+      function makeSample() {
+        var seed = 20261002;
+        function rnd() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+        var log = [], id = 1;
+        var INK = '#1f2a37', RED = '#d62839', BLUE = '#1e6fd9';
+        function label(s, x, y, c, t) { var it = { id: id++, k: 'label', c: c, t: t, x: x, y: y, s: s }; log.push(['a', t, it]); return it.id; }
+        function arrow(x1, y1, x2, y2, t, d) { log.push(['a', t, { id: id++, k: 'arrow', c: RED, w: 3, t: t, d: d, x1: x1, y1: y1, x2: x2, y2: y2 }]); }
+        function pen(pts, c, w, t) {
+          var p = [], dt = 0, i, s, lx = null, ly = null;
+          for (i = 1; i < pts.length; i++) {
+            var ax = pts[i - 1][0], ay = pts[i - 1][1], bx = pts[i][0], by = pts[i][1];
+            var len = Math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay)), steps = Math.max(1, Math.round(len / 4));
+            for (s = (i === 1 ? 0 : 1); s <= steps; s++) {
+              var f = s / steps, x = Math.round(ax + (bx - ax) * f + (rnd() - 0.5) * 1.6), y = Math.round(ay + (by - ay) * f + (rnd() - 0.5) * 1.6);
+              if (lx !== null) dt += Math.round(Math.sqrt((x - lx) * (x - lx) + (y - ly) * (y - ly)) / (0.28 + rnd() * 0.12));
+              p.push(x, y, dt); lx = x; ly = y;
+            }
+          }
+          log.push(['a', t, { id: id++, k: 'pen', c: c, w: w, t: t, p: p }]);
+        }
+        function curve(x0, y0, cx, cy, x1, y1, n) {
+          var out = [], i;
+          for (i = 0; i <= n; i++) { var f = i / n, u = 1 - f; out.push([u * u * x0 + 2 * u * f * cx + f * f * x1, u * u * y0 + 2 * u * f * cy + f * f * y1]); }
+          return out;
+        }
+        function loop(cx, cy, r, a0, turns, n) {
+          var out = [], i;
+          for (i = 0; i <= n; i++) { var a = a0 + turns * 2 * Math.PI * i / n, rr = r * (1 + 0.08 * Math.sin(i * 0.9)); out.push([cx + rr * Math.cos(a), cy + rr * Math.sin(a)]); }
+          return out;
+        }
+        label('nucleus', 92, 160, INK, 4200);
+        arrow(146, 164, 226, 186, 6300, 620);
+        label('cell wall', 96, 540, INK, 11800);
+        arrow(150, 522, 195, 478, 13600, 540);
+        label('chloroplast', 705, 50, INK, 19400);
+        arrow(668, 64, 575, 133, 21500, 700);
+        label('vacuole', 708, 298, INK, 27800);
+        arrow(650, 300, 498, 298, 29700, 820);
+        var bad = label('mitocondria', 97, 330, INK, 37600);
+        arrow(180, 332, 273, 334, 40100, 610);
+        log.push(['d', 47300, [bad]]);
+        label('mitochondria', 97, 330, INK, 51900);
+        label('cell membrane', 700, 470, INK, 60200);
+        arrow(652, 452, 593, 402, 62400, 480);
+        label('nucleolus', 92, 250, BLUE, 71800);
+        pen(curve(158, 250, 200, 250, 234, 207, 10), BLUE, 3, 73900);
+        pen(loop(252, 196, 19, -2.4, 1.08, 26), BLUE, 3, 76200);
+        label('cytoplasm', 706, 560, INK, 84600);
+        arrow(652, 551, 524, 470, 86800, 760);
+        return {
+          format: 'sketch-label/1',
+          view: [VW, VH],
+          events: log,
+          answer: 'Chloroplasts use energy from sunlight to make food (glucose) for the plant from carbon dioxide and water. This is called photosynthesis, and it gives off oxygen.',
+          question: DEFAULT_QUESTION,
+          parts: parseParts(DEFAULT_PARTS),
+          timeSpentMs: 171000,
+          snapshot: null
+        };
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+{
+  "zestSpec": "1.0",
+  "name": "Label the Plant Cell",
+  "version": "1.0.0",
+  "description": "Students label an unlabelled plant cell by drawing arrows and writing part names right on the diagram, then explain what the chloroplast does. Teacher-graded: SpeedGrader shows the finished drawing and replays it stroke by stroke.",
+  "author": "Virtual Arkansas",
+  "grading": "teacher",
+  "mainFile": "index.html",
+  "reviewFile": "review.html",
+  "tags": ["life science", "biology", "cells", "plant cell", "drawing", "diagram labelling", "middle school", "high school", "teacher-graded"],
+  "parameters": [
+    {
+      "key": "parts",
+      "type": "text",
+      "label": "Parts to label (comma-separated)",
+      "default": "cell wall, cell membrane, nucleus, chloroplast, vacuole, mitochondrion"
+    },
+    {
+      "key": "question",
+      "type": "text",
+      "label": "Explanation question",
+      "default": "What does the chloroplast do?"
+    }
+  ],
+  "sandbox": {
+    "allowScripts": true,
+    "allowSameOrigin": true,
+    "allowPopups": false,
+    "allowForms": true,
+    "allowModals": false,
+    "allowTopNavigation": false
+  }
+}

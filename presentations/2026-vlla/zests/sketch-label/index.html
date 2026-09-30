@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Label the Plant Cell</title>
+  <script src="/public/zest-bridge.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #eaf2e4;
+      color: #22302a;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button { font-family: inherit; }
+    #app { height: 100%; display: flex; flex-direction: column; max-width: 1180px; margin: 0 auto; }
+
+    /* Header */
+    .top {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 10px 16px 8px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .logo {
+      width: 38px; height: 38px; border-radius: 11px; flex: none;
+      background: linear-gradient(145deg, #43a047, #1b5e20);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 3px 8px rgba(27, 94, 32, 0.3);
+    }
+    h1 { font-size: 19px; line-height: 1.15; color: #1b5e20; letter-spacing: -0.2px; }
+    .sub { font-size: 12.5px; color: #5d6f63; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pill {
+      font-size: 12px; color: #4c5d52; background: #fff; border-radius: 999px;
+      padding: 5px 10px; display: none; align-items: center; gap: 6px; white-space: nowrap;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .pill.show { display: inline-flex; }
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #27ae60; }
+    .sync-dot.dirty { background: #f39c12; }
+    .sync-dot.syncing { background: #3498db; animation: pulse 1s infinite; }
+    .sync-dot.error, .sync-dot.expired { background: #e74c3c; }
+    .sync-dot.preview { background: #8e7cc3; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+    .banner {
+      margin: 0 16px 8px; padding: 7px 12px; border-radius: 10px; font-size: 13px;
+      display: none; align-items: center; gap: 8px;
+    }
+    .banner.show { display: flex; }
+    .banner.preview { background: #f1ecfb; color: #4a3a78; border: 1px solid #ddd2f3; }
+    .banner.restored { background: #e3f4e6; color: #1e5b2a; border: 1px solid #c4e4ca; }
+
+    /* Main layout */
+    .main {
+      flex: 1; min-height: 0; display: flex; gap: 12px; padding: 0 16px 14px;
+    }
+    .stage-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+    .side { width: 300px; flex: none; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto; padding-bottom: 2px; }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+      background: #fff; border-radius: 14px; padding: 5px 6px;
+      box-shadow: 0 1px 4px rgba(20, 60, 20, 0.1);
+    }
+    .grp { display: flex; align-items: center; gap: 3px; }
+    .grp.hist { margin-left: auto; }
+    .tb {
+      border: none; background: transparent; color: #33443a; border-radius: 10px;
+      width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background 0.15s, color 0.15s; flex: none;
+    }
+    .tb svg { width: 21px; height: 21px; }
+    .tb:hover:not(:disabled) { background: #eef5ea; }
+    .tb:disabled { opacity: 0.35; cursor: default; }
+    .tb.tool { width: 50px; height: 44px; flex-direction: column; gap: 1px; font-size: 10.5px; font-weight: 600; }
+    .tb.tool svg { width: 20px; height: 20px; }
+    .tb.tool.on { background: #2e7d32; color: #fff; box-shadow: 0 2px 6px rgba(46, 125, 50, 0.35); }
+    .tb.armed { background: #fdecea; color: #c0392b; box-shadow: inset 0 0 0 2px #c0392b; }
+    .sw {
+      width: 34px; height: 34px; border-radius: 50%; border: none; background: transparent; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; flex: none;
+    }
+    .sw span { width: 22px; height: 22px; border-radius: 50%; display: block; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.6); transition: transform 0.15s; }
+    .sw.on { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #2e7d32; }
+    .sw.on span { transform: scale(1.08); }
+    .wd { width: 38px; height: 38px; }
+    .wd span { display: block; border-radius: 99px; background: #33443a; }
+    .wd.on { background: #e3f1e0; box-shadow: inset 0 0 0 2px #2e7d32; }
+    .sep { width: 1px; height: 26px; background: #e2e8df; }
+
+    /* Stage */
+    .stage {
+      position: relative; flex: 1; min-height: 0; border-radius: 16px; overflow: hidden;
+      background: #fbfdf8; box-shadow: 0 2px 10px rgba(20, 60, 20, 0.12), inset 0 0 0 1px #dbe6d4;
+    }
+    #board { width: 100%; height: 100%; display: block; touch-action: none; -webkit-user-select: none; user-select: none; cursor: crosshair; }
+    #board.t-label { cursor: text; }
+    #board.t-eraser { cursor: cell; }
+    #board text { cursor: inherit; }
+    .coach {
+      position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+      background: rgba(27, 60, 32, 0.9); color: #fff; font-size: 13px; line-height: 1.35;
+      padding: 8px 14px; border-radius: 12px; pointer-events: none; text-align: center;
+      width: max-content; max-width: 92%; transition: opacity 0.3s;
+    }
+    .coach b { color: #b9f0a8; }
+    .coach.hide { opacity: 0; }
+    .toast {
+      position: absolute; left: 50%; top: 10px; transform: translate(-50%, -8px); opacity: 0;
+      background: #263238; color: #fff; font-size: 13px; padding: 7px 12px; border-radius: 10px;
+      pointer-events: none; transition: opacity 0.2s, transform 0.2s; white-space: nowrap; max-width: 94%;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    /* Label bar */
+    .labelbar {
+      position: absolute; left: 8px; right: 8px; top: 8px; display: none; flex-direction: column; gap: 6px;
+      background: rgba(255,255,255,0.97); border-radius: 12px; padding: 8px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+    }
+    .labelbar.show { display: flex; }
+    .lb-row { display: flex; gap: 6px; align-items: center; }
+    .lb-row input {
+      flex: 1; min-width: 0; font-size: 16px; padding: 9px 11px; border: 2px solid #9ccc8f; border-radius: 9px; outline: none;
+      font-family: inherit; color: #1f2a37;
+    }
+    .lb-row input:focus { border-color: #2e7d32; }
+    .lb-btn {
+      border: none; border-radius: 9px; padding: 0 14px; height: 40px; font-size: 14px; font-weight: 700; cursor: pointer; flex: none;
+    }
+    .lb-ok { background: #2e7d32; color: #fff; }
+    .lb-del { background: #fdecea; color: #c0392b; display: none; }
+    .lb-del.show { display: inline-block; }
+    .lb-x { background: #eef1ec; color: #4c5d52; width: 40px; padding: 0; }
+    .lb-chips { display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 1px; }
+    .lb-chips:empty { display: none; }
+    .chip {
+      flex: none; border: 1px solid #cfe3c8; background: #f3faf0; color: #245a2c; font-size: 13px; font-weight: 600;
+      border-radius: 999px; padding: 6px 11px; cursor: pointer; white-space: nowrap;
+    }
+    .chip:hover { background: #e2f2dc; }
+
+    /* Side panel */
+    .card { background: #fff; border-radius: 14px; padding: 12px 14px; box-shadow: 0 1px 4px rgba(20, 60, 20, 0.08); }
+    .card h2 { font-size: 14px; color: #1b5e20; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .count { font-size: 12px; font-weight: 700; color: #fff; background: #9aa89f; border-radius: 999px; padding: 2px 9px; transition: background 0.2s; }
+    .count.all { background: #2e7d32; }
+    .parts { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+    .parts li { display: flex; align-items: center; gap: 9px; font-size: 14px; padding: 4px 2px; color: #3d4c43; }
+    .parts .box {
+      width: 20px; height: 20px; border-radius: 50%; border: 2px solid #b8c7bc; flex: none;
+      display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+    }
+    .parts li.done { color: #1b5e20; font-weight: 600; }
+    .parts li.done .box { background: #2e7d32; border-color: #2e7d32; }
+    .parts li.done .box svg { display: block; }
+    .parts .box svg { display: none; width: 12px; height: 12px; }
+    .parts li.pop .box { animation: pop 0.35s ease; }
+    @keyframes pop { 0% { transform: scale(0.6); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+    .qlabel { display: block; font-size: 14px; font-weight: 700; color: #1b5e20; margin-bottom: 7px; line-height: 1.3; }
+    textarea {
+      width: 100%; min-height: 84px; resize: vertical; font-family: inherit; font-size: 15px; line-height: 1.4;
+      border: 2px solid #d7e3d2; border-radius: 10px; padding: 8px 10px; color: #22302a; outline: none; background: #fbfdfa;
+    }
+    textarea:focus { border-color: #2e7d32; background: #fff; }
+    .btn-submit {
+      width: 100%; border: none; border-radius: 12px; height: 48px; font-size: 16px; font-weight: 700; cursor: pointer;
+      background: #2e7d32; color: #fff; box-shadow: 0 3px 10px rgba(46, 125, 50, 0.3); transition: background 0.15s;
+    }
+    .btn-submit:hover:not(:disabled) { background: #1b5e20; }
+    .btn-submit:disabled { background: #b8c4bb; box-shadow: none; cursor: default; }
+    .btn-submit.armed { background: #f57c00; box-shadow: 0 3px 10px rgba(245, 124, 0, 0.35); }
+    .submit-note { font-size: 12.5px; color: #66756b; margin-top: 7px; text-align: center; line-height: 1.35; min-height: 17px; }
+    .submit-note.err { color: #c0392b; }
+    .submit-note.ok { color: #1e7b34; }
+
+    /* Result overlay */
+    .result {
+      position: fixed; inset: 0; background: rgba(22, 40, 26, 0.55); display: none; align-items: center; justify-content: center;
+      padding: 16px; z-index: 10;
+    }
+    .result.show { display: flex; }
+    .result-card {
+      background: #fff; border-radius: 18px; padding: 20px 20px 16px; width: 100%; max-width: 440px; max-height: 100%;
+      overflow-y: auto; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); animation: rise 0.3s ease;
+    }
+    @keyframes rise { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .result-icon { width: 54px; height: 54px; border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; background: #2e7d32; }
+    .result-icon.preview { background: #7e57c2; }
+    .result-card h2 { font-size: 20px; color: #1b5e20; margin-bottom: 4px; }
+    .result-card h2.preview { color: #4a3a78; }
+    .result-card p { font-size: 14px; color: #4c5d52; line-height: 1.45; }
+    .result-tag { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: #6a4fb3; background: #f1ecfb; border-radius: 999px; padding: 3px 9px; margin-bottom: 8px; }
+    .result-img { width: 100%; border-radius: 12px; margin: 12px 0 8px; border: 1px solid #e1e9dc; display: block; }
+    .result-stats { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 12px; }
+    .result-stats span { font-size: 12.5px; background: #eef5ea; color: #2b4a31; border-radius: 999px; padding: 4px 10px; font-weight: 600; }
+    .result-actions { display: flex; flex-direction: column; gap: 8px; }
+    .btn2 {
+      display: block; border: none; border-radius: 11px; height: 44px; line-height: 44px; font-size: 15px; font-weight: 700;
+      cursor: pointer; text-decoration: none; background: #eef5ea; color: #1b5e20;
+    }
+    .btn2.primary { background: #6a4fb3; color: #fff; }
+
+    /* Phone */
+    @media (max-width: 760px) {
+      .top { padding: 8px 10px 6px; }
+      h1 { font-size: 17px; }
+      .logo { width: 32px; height: 32px; border-radius: 9px; }
+      .banner { margin: 0 10px 6px; font-size: 12px; padding: 6px 10px; }
+      .main { flex-direction: column; padding: 0 10px 10px; gap: 8px; overflow-y: auto; }
+      .stage-wrap { flex: none; gap: 6px; }
+      .stage { flex: none; width: 100%; height: 0; padding-top: 75%; }
+      #board { position: absolute; left: 0; top: 0; }
+      .side { width: auto; overflow: visible; flex: none; }
+      .toolbar { justify-content: space-between; gap: 4px 0; padding: 4px; }
+      .grp.style { order: 3; width: 100%; justify-content: center; border-top: 1px solid #edf1ea; padding-top: 4px; }
+      .grp.hist { margin-left: 0; }
+      .sep { display: none; }
+      .parts { flex-direction: row; flex-wrap: wrap; gap: 4px 10px; }
+      .parts li { font-size: 13px; padding: 2px 0; }
+      .coach { font-size: 12px; bottom: 8px; padding: 6px 10px; }
+      textarea { min-height: 70px; }
+    }
+    @media (max-width: 360px) {
+      .tb.tool { width: 44px; }
+      .tb { width: 36px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="top">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="10" cy="10" r="3"/><path d="M14 16h3"/></svg>
+        </div>
+        <div style="min-width:0">
+          <h1>Label the Plant Cell</h1>
+          <div class="sub" id="sub">Draw arrows and write each part&rsquo;s name on the diagram.</div>
+        </div>
+      </div>
+      <div class="pill" id="sync" role="status"><span class="sync-dot" id="sync-dot"></span><span id="sync-text">Saved</span></div>
+    </header>
+    <div class="banner preview" id="preview-banner" role="note">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.5"/></svg>
+      <span><b>Preview:</b> try it out. Nothing is saved or submitted.</span>
+    </div>
+    <div class="banner restored" id="restored-banner" role="status">Welcome back! Your drawing and answer were restored.</div>
+
+    <main class="main">
+      <section class="stage-wrap">
+        <div class="toolbar" role="toolbar" aria-label="Drawing tools">
+          <div class="grp tools">
+            <button class="tb tool on" data-tool="pen" aria-label="Pen" title="Pen: draw freehand">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16l-1 4z"/><path d="M14 6l3 3"/></svg>Pen</button>
+            <button class="tb tool" data-tool="arrow" aria-label="Arrow" title="Arrow: drag to draw an arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L19 5"/><path d="M10 5h9v9"/></svg>Arrow</button>
+            <button class="tb tool" data-tool="label" aria-label="Label" title="Label: tap to place a name, drag to move it">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7V4h14v3"/><path d="M12 4v16"/><path d="M9 20h6"/></svg>Label</button>
+            <button class="tb tool" data-tool="eraser" aria-label="Eraser" title="Eraser: touch a mark to remove it">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20h11"/><path d="M4.6 15.4l9-9a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L11.4 18.6a2 2 0 0 1-1.4.6H7.4a2 2 0 0 1-1.4-.6l-1.4-1.4a2 2 0 0 1 0-2.8z"/><path d="M9.5 10.5l4 4"/></svg>Eraser</button>
+          </div>
+          <div class="sep"></div>
+          <div class="grp style">
+            <button class="sw on" data-color="0" aria-label="Black ink"><span style="background:#1f2a37"></span></button>
+            <button class="sw" data-color="1" aria-label="Red ink"><span style="background:#d62839"></span></button>
+            <button class="sw" data-color="2" aria-label="Blue ink"><span style="background:#1e6fd9"></span></button>
+            <button class="sw" data-color="3" aria-label="Magenta ink"><span style="background:#c2185b"></span></button>
+            <div class="sep" style="margin:0 4px"></div>
+            <button class="tb wd on" data-width="0" aria-label="Thin line" title="Thin"><span style="width:18px;height:3px"></span></button>
+            <button class="tb wd" data-width="1" aria-label="Thick line" title="Thick"><span style="width:18px;height:7px"></span></button>
+          </div>
+          <div class="grp hist">
+            <button class="tb" id="undo" aria-label="Undo" title="Undo" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+            <button class="tb" id="redo" aria-label="Redo" title="Redo" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+            <button class="tb" id="clear" aria-label="Clear all" title="Clear all" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg></button>
+          </div>
+        </div>
+
+        <div class="stage" id="stage">
+          <svg id="board" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Unlabelled diagram of a plant cell for you to label">
+            <defs><pattern id="pDots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1.1" fill="#dbe7d1"/></pattern><linearGradient id="gWall" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d4eaa8"/><stop offset="1" stop-color="#98c463"/></linearGradient><radialGradient id="gCyto" cx="0.45" cy="0.4" r="0.75"><stop offset="0" stop-color="#fbfdf1"/><stop offset="1" stop-color="#e3f1c8"/></radialGradient><radialGradient id="gVac" cx="0.38" cy="0.3" r="0.8"><stop offset="0" stop-color="#f3faff"/><stop offset="1" stop-color="#c9e4f4"/></radialGradient><radialGradient id="gNuc" cx="0.4" cy="0.35" r="0.7"><stop offset="0" stop-color="#efe6fa"/><stop offset="1" stop-color="#bb9fdd"/></radialGradient><linearGradient id="gChl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9ad986"/><stop offset="1" stop-color="#2f8b3f"/></linearGradient><linearGradient id="gMit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe0bf"/><stop offset="1" stop-color="#f09a5c"/></linearGradient><filter id="fShadow" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#2e5a1c" flood-opacity="0.2"/></filter><g id="chl"><ellipse rx="20" ry="10" fill="url(#gChl)" stroke="#23702f" stroke-width="1.5"/><path d="M-16 0H16" stroke="#c7ecb0" stroke-width="1.2" opacity="0.8"/><g fill="#1d662b" opacity="0.8"><rect x="-13" y="-4.5" width="4" height="9" rx="1"/><rect x="-5.5" y="-5" width="4" height="10" rx="1"/><rect x="2" y="-5" width="4" height="10" rx="1"/><rect x="9.5" y="-4" width="3.5" height="8" rx="1"/></g></g><g id="mit"><ellipse rx="15" ry="7.5" fill="url(#gMit)" stroke="#c0692c" stroke-width="1.5"/><path d="M-10 0l3-4 3 8 3-8 3 8 3-8 3 8 2-4" fill="none" stroke="#c0692c" stroke-width="1.2" stroke-linejoin="round"/></g></defs>
+            <g id="diagram"><rect width="800" height="600" fill="#fbfdf8"/><rect width="800" height="600" fill="url(#pDots)"/><rect x="190" y="70" width="420" height="460" rx="34" fill="url(#gWall)" stroke="#5b8c32" stroke-width="3" filter="url(#fShadow)"/><rect x="196.5" y="76.5" width="407" height="447" rx="29" fill="none" stroke="#b9dc8a" stroke-width="1.2" opacity="0.9"/><rect x="204" y="84" width="392" height="432" rx="24" fill="url(#gCyto)" stroke="#3f7a2b" stroke-width="2.5"/><g fill="#7a9656" opacity="0.75"><circle cx="214" cy="473.4" r="1.9"/><circle cx="321.6" cy="180.7" r="1.9"/><circle cx="557.1" cy="426.7" r="1.9"/><circle cx="557.4" cy="377.7" r="1.9"/><circle cx="552.1" cy="116.6" r="1.9"/><circle cx="509.6" cy="455.6" r="1.9"/><circle cx="255.3" cy="431.5" r="1.9"/><circle cx="271.1" cy="126.1" r="1.9"/><circle cx="265.3" cy="473.8" r="1.9"/><circle cx="543.1" cy="460.9" r="1.9"/><circle cx="242.3" cy="94.7" r="1.9"/><circle cx="542.1" cy="190.9" r="1.9"/><circle cx="353.1" cy="462.4" r="1.9"/><circle cx="284" cy="493.1" r="1.9"/><circle cx="233.5" cy="411" r="1.9"/><circle cx="262.6" cy="377.4" r="1.9"/><circle cx="583.3" cy="487.2" r="1.9"/><circle cx="555.6" cy="176.2" r="1.9"/><circle cx="289.4" cy="391.8" r="1.9"/><circle cx="520.1" cy="471.2" r="1.9"/><circle cx="227.8" cy="150" r="1.9"/><circle cx="243.9" cy="138.6" r="1.9"/><circle cx="439.1" cy="483.6" r="1.9"/><circle cx="289.2" cy="372.1" r="1.9"/><circle cx="315.5" cy="360.4" r="1.9"/><circle cx="367.8" cy="131.6" r="1.9"/><circle cx="301.1" cy="474.7" r="1.9"/><circle cx="347.1" cy="126.6" r="1.9"/><circle cx="511" cy="136.9" r="1.9"/><circle cx="361" cy="171.3" r="1.9"/><circle cx="540.4" cy="141.8" r="1.9"/><circle cx="447.1" cy="100.6" r="1.9"/><circle cx="337.2" cy="388.5" r="1.9"/><circle cx="569.3" cy="319.7" r="1.9"/></g><path d="M372 150C450 132 534 146 548 205C562 265 558 385 538 430C516 468 440 472 390 458C350 446 336 392 340 332C344 272 330 172 372 150Z" fill="url(#gVac)" stroke="#6fa7c9" stroke-width="2.5"/><path d="M392 176C440 160 500 166 516 204" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity="0.7"/><g fill="none" stroke="#d38bb0" stroke-width="3.5" stroke-linecap="round"><path d="M222 252C250 268 290 262 318 238"/><path d="M226 270C258 288 300 280 322 258"/><path d="M234 288C262 304 298 300 318 282"/></g><g fill="#8a4468"><circle cx="228.9" cy="252.4" r="1.8"/><circle cx="242" cy="256.4" r="1.8"/><circle cx="255.8" cy="257.9" r="1.8"/><circle cx="270" cy="257" r="1.8"/><circle cx="284.2" cy="253.7" r="1.8"/><circle cx="298" cy="248.2" r="1.8"/><circle cx="311.1" cy="240.4" r="1.8"/><circle cx="233.9" cy="276.8" r="1.8"/><circle cx="248.3" cy="281.2" r="1.8"/><circle cx="263" cy="282.9" r="1.8"/><circle cx="277.8" cy="282" r="1.8"/><circle cx="291.9" cy="278.8" r="1.8"/><circle cx="304.9" cy="273.4" r="1.8"/><circle cx="316.4" cy="266" r="1.8"/><circle cx="240.9" cy="288.5" r="1.8"/><circle cx="253.4" cy="292.7" r="1.8"/><circle cx="266.2" cy="294.8" r="1.8"/><circle cx="279" cy="294.8" r="1.8"/><circle cx="291.3" cy="292.7" r="1.8"/><circle cx="302.7" cy="288.8" r="1.8"/><circle cx="312.9" cy="283" r="1.8"/></g><circle cx="262" cy="190" r="44" fill="url(#gNuc)" stroke="#7a55a8" stroke-width="3"/><circle cx="262" cy="190" r="39.5" fill="none" stroke="#7a55a8" stroke-width="1" opacity="0.55" stroke-dasharray="14 3"/><g fill="none" stroke="#9b7cc4" stroke-width="1.3" stroke-linecap="round" opacity="0.7"><path d="M240 170q6-6 12 0t12 0"/><path d="M270 214q5 5 10 0t10 0"/><path d="M276 168q4 6 10 4"/><path d="M236 208q5-3 9 2"/></g><circle cx="252" cy="196" r="13" fill="#6b4497"/><circle cx="248" cy="192" r="4" fill="#8d68b8" opacity="0.8"/><use href="#chl" transform="translate(300 110) rotate(-8)"/><use href="#chl" transform="translate(410 112) rotate(-4)"/><use href="#chl" transform="translate(492 110) rotate(6)"/><use href="#chl" transform="translate(566 142) rotate(55)"/><use href="#chl" transform="translate(577 252) rotate(88)"/><use href="#chl" transform="translate(578 348) rotate(92)"/><use href="#chl" transform="translate(570 452) rotate(55)"/><use href="#chl" transform="translate(492 492) rotate(3)"/><use href="#chl" transform="translate(412 494) rotate(-3)"/><use href="#chl" transform="translate(330 480) rotate(-20)"/><use href="#chl" transform="translate(238 372) rotate(78)"/><use href="#mit" transform="translate(354 100) rotate(5)"/><use href="#mit" transform="translate(285 330) rotate(-30)"/><use href="#mit" transform="translate(318 405) rotate(60)"/><use href="#mit" transform="translate(250 452) rotate(15)"/><use href="#mit" transform="translate(540 497) rotate(-20)"/><use href="#mit" transform="translate(576 196) rotate(84)"/></g>
+            <g id="ink"></g>
+            <g id="live"></g>
+            <g id="overlay"></g>
+          </svg>
+          <div class="coach" id="coach"><b>Arrow</b>: drag from a part outward &nbsp;&middot;&nbsp; <b>Label</b>: tap and type its name</div>
+          <div class="toast" id="toast"></div>
+          <div class="labelbar" id="labelbar">
+            <div class="lb-row">
+              <input id="lb-input" type="text" maxlength="40" placeholder="Type the part name" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Label text">
+              <button class="lb-btn lb-ok" id="lb-ok">Add</button>
+              <button class="lb-btn lb-del" id="lb-del">Delete</button>
+              <button class="lb-btn lb-x" id="lb-x" aria-label="Cancel">&#10005;</button>
+            </div>
+            <div class="lb-chips" id="lb-chips"></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side">
+        <div class="card">
+          <h2>Parts to label <span class="count" id="count">0 / 0</span></h2>
+          <ul class="parts" id="parts"></ul>
+        </div>
+        <div class="card">
+          <label class="qlabel" for="answer" id="qtext">What does the chloroplast do?</label>
+          <textarea id="answer" maxlength="1500" placeholder="Explain in a sentence or two&hellip;"></textarea>
+        </div>
+        <div>
+          <button class="btn-submit" id="submit" disabled>Submit</button>
+          <div class="submit-note" id="submit-note">Add at least one label and answer the question to submit.</div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <div class="result" id="result" role="dialog" aria-modal="true" aria-labelledby="result-title">
+    <div class="result-card">
+      <div id="result-tag"></div>
+      <div class="result-icon" id="result-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <h2 id="result-title">Submitted for grading</h2>
+      <p id="result-text"></p>
+      <img class="result-img" id="result-img" alt="Your labelled plant cell" hidden>
+      <div class="result-stats" id="result-stats"></div>
+      <div class="result-actions">
+        <a class="btn2 primary" id="result-review" href="review.html" hidden>See the teacher&rsquo;s replay view &rarr;</a>
+        <button class="btn2" id="result-back">Back to my drawing</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // ---- Shared drawing model (same code in index.html and review.html) ----
+      // Event log: ['a', t, item] add, ['d', t, [ids]] erase, ['r', t, [ids]] restore,
+      // ['m', t, id, x, y] move label, ['e', t, id, text] edit label. t = ms of activity time.
+      // Items: pen {id,k:'pen',c,w,t,p:[x,y,dt,...]}, arrow {id,k:'arrow',c,w,t,d,x1,y1,x2,y2},
+      // label {id,k:'label',c,t,x,y,s}. Coordinates are in the 800x600 diagram space.
+      var VW = 800, VH = 600;
+      var LABEL_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+
+      function safeColor(c) {
+        return /^#[0-9a-fA-F]{3,8}$/.test(String(c)) ? c : '#1f2a37';
+      }
+
+      function num(n, d) {
+        n = Number(n);
+        return isFinite(n) ? n : (d || 0);
+      }
+
+      function penPath(p, n) {
+        if (n < 1) return '';
+        var d = 'M' + num(p[0]) + ' ' + num(p[1]);
+        if (n === 1) return d + 'l0.01 0';
+        var i;
+        for (i = 1; i < n - 1; i++) {
+          var x = num(p[i * 3]), y = num(p[i * 3 + 1]);
+          var nx = num(p[(i + 1) * 3]), ny = num(p[(i + 1) * 3 + 1]);
+          d += 'Q' + x + ' ' + y + ' ' + ((x + nx) / 2) + ' ' + ((y + ny) / 2);
+        }
+        d += 'L' + num(p[(n - 1) * 3]) + ' ' + num(p[(n - 1) * 3 + 1]);
+        return d;
+      }
+
+      function arrowSvg(x1, y1, x2, y2, c, w, extra) {
+        var dx = x2 - x1, dy = y2 - y1, len = Math.sqrt(dx * dx + dy * dy);
+        if (len < 1) return '';
+        var ux = dx / len, uy = dy / len;
+        var hl = Math.min(12 + w * 2.2, len * 0.9), hw = hl * 0.55;
+        var bx = x2 - ux * hl, by = y2 - uy * hl;
+        var sx = x2 - ux * hl * 0.7, sy = y2 - uy * hl * 0.7;
+        var r = function (v) { return Math.round(v * 10) / 10; };
+        return '<g' + (extra || '') + '><line x1="' + r(x1) + '" y1="' + r(y1) + '" x2="' + r(sx) + '" y2="' + r(sy) +
+          '" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="round"/>' +
+          '<path d="M' + r(x2) + ' ' + r(y2) + 'L' + r(bx - uy * hw) + ' ' + r(by + ux * hw) + 'L' + r(bx + uy * hw) + ' ' + r(by - ux * hw) +
+          'Z" fill="' + c + '" stroke="' + c + '" stroke-width="2" stroke-linejoin="round"/></g>';
+      }
+
+      function labelSvg(id, x, y, s, c, extra) {
+        return '<text data-id="' + id + '" x="' + num(x) + '" y="' + (num(y) + 8.5) + '" text-anchor="middle" font-family="' + esc(LABEL_FONT) +
+          '" font-size="24" font-weight="700" fill="' + c + '" stroke="#ffffff" stroke-width="5" stroke-linejoin="round" paint-order="stroke"' +
+          (extra || '') + '>' + esc(s) + '</text>';
+      }
+
+      function sortLog(log) {
+        // stable sort by time
+        var a = [], i;
+        for (i = 0; i < log.length; i++) if (log[i] && log[i].length >= 2) a.push({ i: i, op: log[i] });
+        a.sort(function (p, q) { return (num(p.op[1]) - num(q.op[1])) || (p.i - q.i); });
+        var out = [];
+        for (i = 0; i < a.length; i++) out.push(a[i].op);
+        return out;
+      }
+
+      // Fold the log up to time T (Infinity = everything) into { live: id -> {it,on,x,y,s}, order: [ids] }
+      function foldLog(log, T) {
+        var live = {}, order = [], i, j, op, ids, L;
+        if (T === undefined) T = Infinity;
+        for (i = 0; i < log.length; i++) {
+          op = log[i];
+          if (!op || num(op[1]) > T) continue;
+          if (op[0] === 'a' && op[2] && op[2].id != null) {
+            var it = op[2];
+            if (!live[it.id]) order.push(it.id);
+            live[it.id] = { it: it, on: true, x: it.x, y: it.y, s: it.s };
+          } else if (op[0] === 'd' || op[0] === 'r') {
+            ids = op[2] || [];
+            for (j = 0; j < ids.length; j++) if (live[ids[j]]) live[ids[j]].on = (op[0] === 'r');
+          } else if (op[0] === 'm') {
+            L = live[op[2]];
+            if (L) { L.x = op[3]; L.y = op[4]; }
+          } else if (op[0] === 'e') {
+            L = live[op[2]];
+            if (L) L.s = op[3];
+          }
+        }
+        return { live: live, order: order };
+      }
+
+      // SVG for the folded drawing at time T (pens and arrows drawn partially while in progress)
+      function inkSvg(fold, T) {
+        var out = [], i, L, it, c;
+        if (T === undefined) T = Infinity;
+        for (i = 0; i < fold.order.length; i++) {
+          L = fold.live[fold.order[i]];
+          if (!L || !L.on) continue;
+          it = L.it;
+          c = safeColor(it.c);
+          if (it.k === 'pen' && it.p) {
+            var n = Math.floor(it.p.length / 3);
+            if (T !== Infinity) {
+              var m = 0;
+              while (m < n && num(it.t) + num(it.p[m * 3 + 2]) <= T) m++;
+              n = m;
+            }
+            if (n > 0) out.push('<path data-id="' + it.id + '" d="' + penPath(it.p, n) + '" fill="none" stroke="' + c +
+              '" stroke-width="' + num(it.w, 3) + '" stroke-linecap="round" stroke-linejoin="round"/>');
+          } else if (it.k === 'arrow') {
+            var f = 1;
+            if (T !== Infinity && num(it.d) > 0) f = Math.max(0, Math.min(1, (T - num(it.t)) / num(it.d)));
+            var x1 = num(it.x1), y1 = num(it.y1);
+            out.push(arrowSvg(x1, y1, x1 + (num(it.x2) - x1) * f, y1 + (num(it.y2) - y1) * f, c, num(it.w, 3), ' data-id="' + it.id + '"'));
+          } else if (it.k === 'label') {
+            out.push(labelSvg(it.id, L.x, L.y, L.s, c));
+          }
+        }
+        return out.join('');
+      }
+
+      function liveLabels(fold) {
+        var out = [], i, L;
+        for (i = 0; i < fold.order.length; i++) {
+          L = fold.live[fold.order[i]];
+          if (L && L.on && L.it.k === 'label' && String(L.s || '').replace(/\s+/g, '')) out.push({ id: L.it.id, s: String(L.s), x: L.x, y: L.y });
+        }
+        return out;
+      }
+
+      // ---- Fuzzy matching of part names (case-insensitive, plurals, small typos) ----
+      var PLURALS = { mitochondria: 'mitochondrion', nuclei: 'nucleus', vacuoles: 'vacuole', chloroplasts: 'chloroplast',
+        ribosomes: 'ribosome', walls: 'wall', membranes: 'membrane', nucleoli: 'nucleolus', vesicles: 'vesicle' };
+      var VARIANTS = { mitochondrion: ['mitochondria'], nucleus: ['nuclei'], nucleolus: ['nucleoli'] };
+      var STOP = { the: 1, a: 1, an: 1, of: 1, and: 1 };
+
+      function normWord(w) {
+        w = w.toLowerCase();
+        if (PLURALS[w]) return PLURALS[w];
+        if (w.length > 4 && w.charAt(w.length - 1) === 's' && !/(ss|us|is)$/.test(w)) return w.slice(0, -1);
+        return w;
+      }
+
+      function tokens(s) {
+        var raw = String(s || '').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/), out = [], i;
+        for (i = 0; i < raw.length; i++) if (raw[i] && !STOP[raw[i]]) out.push(normWord(raw[i]));
+        return out;
+      }
+
+      function lev(a, b) {
+        var m = a.length, n = b.length, prev = [], cur, i, j;
+        for (j = 0; j <= n; j++) prev.push(j);
+        for (i = 1; i <= m; i++) {
+          cur = [i];
+          for (j = 1; j <= n; j++) {
+            cur.push(Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1)));
+          }
+          prev = cur;
+        }
+        return prev[n];
+      }
+
+      function tokMatch(p, l) {
+        var cands = [p].concat(VARIANTS[p] || []), i;
+        for (i = 0; i < cands.length; i++) {
+          var a = cands[i];
+          if (a === l) return true;
+          var L = Math.max(a.length, l.length), tol = L >= 10 ? 2 : (L >= 5 ? 1 : 0);
+          if (tol && Math.abs(a.length - l.length) <= tol && lev(a, l) <= tol) return true;
+        }
+        return false;
+      }
+
+      function partMatches(part, label) {
+        var pt = tokens(part), lt = tokens(label), i, j, ok;
+        if (pt.length > 1) {
+          var rest = [];
+          for (i = 0; i < pt.length; i++) if (pt[i] !== 'cell') rest.push(pt[i]);
+          if (rest.length) pt = rest;
+        }
+        if (!pt.length || !lt.length) return false;
+        for (i = 0; i < pt.length; i++) {
+          ok = false;
+          for (j = 0; j < lt.length; j++) if (tokMatch(pt[i], lt[j])) { ok = true; break; }
+          if (!ok) return false;
+        }
+        return true;
+      }
+
+      function parseParts(s) {
+        var raw = String(s || '').split(','), out = [], seen = {}, i, p;
+        for (i = 0; i < raw.length && out.length < 14; i++) {
+          p = raw[i].replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '').slice(0, 40);
+          if (p && !seen[p.toLowerCase()]) { seen[p.toLowerCase()] = 1; out.push(p); }
+        }
+        return out;
+      }
+
+      // For each part, the first label text that names it (or null)
+      function checkParts(parts, labels) {
+        var out = [], i, j, hit;
+        for (i = 0; i < parts.length; i++) {
+          hit = null;
+          for (j = 0; j < labels.length; j++) if (partMatches(parts[i], labels[j].s)) { hit = labels[j]; break; }
+          out.push({ part: parts[i], label: hit ? hit.s : null });
+        }
+        return out;
+      }
+
+      function fmtTime(ms) {
+        var s = Math.max(0, Math.round(num(ms) / 1000)), m = Math.floor(s / 60);
+        s = s % 60;
+        return m + ':' + (s < 10 ? '0' : '') + s;
+      }
+
+      function fmtDuration(ms) {
+        var s = Math.max(0, Math.round(num(ms) / 1000)), m = Math.floor(s / 60);
+        if (m === 0) return s + 's';
+        return m + 'm ' + (s % 60) + 's';
+      }
+      // ---- end shared ----
+
+
+      var COLORS = ['#1f2a37', '#d62839', '#1e6fd9', '#c2185b'];
+      var WIDTHS = [3, 7];
+      var DEFAULT_PARTS = 'cell wall, cell membrane, nucleus, chloroplast, vacuole, mitochondrion';
+      var DEFAULT_QUESTION = 'What does the chloroplast do?';
+      var MAX_POINTS = 40000;
+      var PREVIEW_KEY = 'sketch-label-preview';
+
+      function byId(id) { return document.getElementById(id); }
+      var board = byId('board'), inkG = byId('ink'), liveG = byId('live'), overlayG = byId('overlay');
+      var answerEl = byId('answer'), submitBtn = byId('submit'), submitNote = byId('submit-note');
+      var labelbar = byId('labelbar'), lbInput = byId('lb-input');
+
+      // ---- state ----
+      var mode = null;             // null until started, then 'preview' or 'live'
+      var parts = parseParts(DEFAULT_PARTS), question = DEFAULT_QUESTION;
+      var log = [], nextId = 1, undoStack = [], redoStack = [];
+      var model = { live: {}, order: [] };
+      var tool = 'pen', color = COLORS[0], width = WIDTHS[0];
+      var clockBase = 0, clockStart = Date.now(), clockRunning = true;
+      var totalPoints = 0;
+      var submitted = false, submittedAt = null, submitting = false, submitArmed = false, submitArmTimer = null, retryMode = false;
+      var clearArmed = false, clearTimer = null;
+      var prevDone = {};
+
+      function now() { return Math.round(clockBase + (clockRunning ? Date.now() - clockStart : 0)); }
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden && clockRunning) { clockBase = now(); clockRunning = false; }
+        else if (!document.hidden && !clockRunning) { clockStart = Date.now(); clockRunning = true; }
+      });
+
+      // ---- model ----
+      function applyOp(op) {
+        var k = op[0], i, L;
+        if (k === 'a') {
+          var it = op[2];
+          if (!model.live[it.id]) model.order.push(it.id);
+          model.live[it.id] = { it: it, on: true, x: it.x, y: it.y, s: it.s };
+        } else if (k === 'd' || k === 'r') {
+          for (i = 0; i < op[2].length; i++) { L = model.live[op[2][i]]; if (L) L.on = (k === 'r'); }
+        } else if (k === 'm') {
+          L = model.live[op[2]]; if (L) { L.x = op[3]; L.y = op[4]; }
+        } else if (k === 'e') {
+          L = model.live[op[2]]; if (L) L.s = op[3];
+        }
+      }
+
+      function commit(tpl, undoEntry) {
+        var op = [tpl[0], tpl[0] === 'a' ? tpl[1].t : now()].concat(tpl.slice(1));
+        log.push(op);
+        applyOp(op);
+        if (undoEntry) { undoStack.push(undoEntry); if (undoStack.length > 200) undoStack.shift(); redoStack = []; }
+        changed();
+      }
+
+      function rebuild() {
+        model = foldLog(log);
+        totalPoints = 0;
+        for (var i = 0; i < model.order.length; i++) {
+          var it = model.live[model.order[i]].it;
+          if (it.k === 'pen' && it.p) totalPoints += it.p.length / 3;
+        }
+      }
+
+      function aliveIds() {
+        var out = [], i;
+        for (i = 0; i < model.order.length; i++) if (model.live[model.order[i]].on) out.push(model.order[i]);
+        return out;
+      }
+
+      function changed() {
+        render();
+        updateUI();
+        persist();
+      }
+
+      function render() {
+        inkG.innerHTML = inkSvg(model);
+      }
+
+      // ---- coordinates ----
+      function toView(e) {
+        var m = board.getScreenCTM();
+        if (!m) return { x: 0, y: 0 };
+        var pt = board.createSVGPoint();
+        pt.x = e.clientX; pt.y = e.clientY;
+        var p = pt.matrixTransform(m.inverse());
+        return { x: Math.round(Math.max(0, Math.min(VW, p.x))), y: Math.round(Math.max(0, Math.min(VH, p.y))) };
+      }
+
+      // ---- hit testing ----
+      function distSeg(px, py, x1, y1, x2, y2) {
+        var dx = x2 - x1, dy = y2 - y1, l2 = dx * dx + dy * dy, t = 0;
+        if (l2 > 0) t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / l2));
+        var cx = x1 + t * dx - px, cy = y1 + t * dy - py;
+        return Math.sqrt(cx * cx + cy * cy);
+      }
+
+      function labelBox(L) {
+        var el = inkG.querySelector('text[data-id="' + L.it.id + '"]'), b = null;
+        try { if (el) b = el.getBBox(); } catch (e) { b = null; }
+        if (!b || !b.width) {
+          var w = String(L.s || '').length * 13.5 + 6;
+          b = { x: L.x - w / 2, y: L.y - 15, width: w, height: 30 };
+        }
+        return b;
+      }
+
+      function hitItem(pt, onlyLabels) {
+        var i, L, it, pad;
+        for (i = model.order.length - 1; i >= 0; i--) {
+          L = model.live[model.order[i]];
+          if (!L.on) continue;
+          it = L.it;
+          if (it.k === 'label') {
+            var b = labelBox(L); pad = 8;
+            if (pt.x >= b.x - pad && pt.x <= b.x + b.width + pad && pt.y >= b.y - pad && pt.y <= b.y + b.height + pad) return it.id;
+          } else if (onlyLabels) {
+            continue;
+          } else if (it.k === 'arrow') {
+            if (distSeg(pt.x, pt.y, it.x1, it.y1, it.x2, it.y2) < 12 + it.w / 2) return it.id;
+          } else if (it.k === 'pen') {
+            var p = it.p, n = p.length / 3, j, tol = 10 + it.w / 2;
+            if (n === 1 && distSeg(pt.x, pt.y, p[0], p[1], p[0], p[1]) < tol) return it.id;
+            for (j = 1; j < n; j++) if (distSeg(pt.x, pt.y, p[(j - 1) * 3], p[(j - 1) * 3 + 1], p[j * 3], p[j * 3 + 1]) < tol) return it.id;
+          }
+        }
+        return null;
+      }
+
+      // ---- pointer input ----
+      var active = null;   // { pid, kind, ... }
+
+      board.addEventListener('pointerdown', function (e) {
+        if (!mode || active || (e.button !== undefined && e.button > 0) || e.isPrimary === false) return;
+        if (submitting) return;
+        e.preventDefault();
+        var pt = toView(e), id;
+        hideCoach();
+        if (tool === 'label') {
+          id = hitItem(pt, true);
+          if (id !== null) {
+            var L = model.live[id];
+            active = { pid: e.pointerId, kind: 'drag', id: id, ox: pt.x - L.x, oy: pt.y - L.y, fx: L.x, fy: L.y, moved: false, sx: pt.x, sy: pt.y };
+          } else {
+            openLabelBar(pt, null);
+            return;
+          }
+        } else {
+          if (labelbar.className.indexOf('show') >= 0) closeLabelBar();
+          if (tool === 'pen') {
+            if (totalPoints >= MAX_POINTS) { toast('That is a lot of ink! Erase something to keep drawing.'); return; }
+            active = { pid: e.pointerId, kind: 'pen', it: { id: nextId++, k: 'pen', c: color, w: width, t: now(), p: [pt.x, pt.y, 0] } };
+            drawLive();
+          } else if (tool === 'arrow') {
+            active = { pid: e.pointerId, kind: 'arrow', it: { id: nextId++, k: 'arrow', c: color, w: width, t: now(), d: 0, x1: pt.x, y1: pt.y, x2: pt.x, y2: pt.y } };
+          } else if (tool === 'eraser') {
+            active = { pid: e.pointerId, kind: 'erase', ids: [] };
+            eraseAt(pt);
+          }
+        }
+        try { board.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      });
+
+      function onMove(e) {
+        if (!active || e.pointerId !== active.pid) return;
+        e.preventDefault();
+        var evs = (e.getCoalescedEvents && active.kind === 'pen') ? e.getCoalescedEvents() : null;
+        if (!evs || !evs.length) evs = [e];
+        for (var i = 0; i < evs.length; i++) moveTo(toView(evs[i]));
+        if (active.kind === 'pen' || active.kind === 'arrow') drawLive();
+      }
+
+      function moveTo(pt) {
+        var a = active;
+        if (a.kind === 'pen') {
+          var p = a.it.p, n = p.length;
+          var dx = pt.x - p[n - 3], dy = pt.y - p[n - 2];
+          if (dx * dx + dy * dy >= 9 && totalPoints + p.length / 3 < MAX_POINTS) p.push(pt.x, pt.y, now() - a.it.t);
+        } else if (a.kind === 'arrow') {
+          a.it.x2 = pt.x; a.it.y2 = pt.y;
+        } else if (a.kind === 'erase') {
+          eraseAt(pt);
+        } else if (a.kind === 'drag') {
+          if (!a.moved && Math.abs(pt.x - a.sx) + Math.abs(pt.y - a.sy) > 5) a.moved = true;
+          if (a.moved) {
+            var L = model.live[a.id];
+            L.x = clampLabelX(pt.x - a.ox, L.s); L.y = Math.max(14, Math.min(VH - 14, pt.y - a.oy));
+            var el = inkG.querySelector('text[data-id="' + a.id + '"]');
+            if (el) { el.setAttribute('x', L.x); el.setAttribute('y', L.y + 8.5); }
+          }
+        }
+      }
+
+      function onUp(e) {
+        if (!active || e.pointerId !== active.pid) return;
+        var a = active, it;
+        active = null;
+        liveG.innerHTML = '';
+        if (e.type === 'pointercancel' && a.kind !== 'drag' && a.kind !== 'erase') return;
+        if (a.kind === 'pen') {
+          it = a.it;
+          totalPoints += it.p.length / 3;
+          commit(['a', it], { undo: ['d', [it.id]], redo: ['r', [it.id]] });
+        } else if (a.kind === 'arrow') {
+          it = a.it;
+          var dx = it.x2 - it.x1, dy = it.y2 - it.y1;
+          if (dx * dx + dy * dy < 20 * 20) { toast('Drag to draw an arrow'); return; }
+          it.d = Math.max(0, now() - it.t);
+          commit(['a', it], { undo: ['d', [it.id]], redo: ['r', [it.id]] });
+        } else if (a.kind === 'erase') {
+          if (a.ids.length) {
+            undoStack.push({ undo: ['r', a.ids], redo: ['d', a.ids] });
+            redoStack = [];
+            updateUI();
+            persist();
+          }
+        } else if (a.kind === 'drag') {
+          var L = model.live[a.id];
+          if (a.moved) {
+            var tx = Math.round(L.x), ty = Math.round(L.y);
+            L.x = a.fx; L.y = a.fy;
+            commit(['m', a.id, tx, ty], { undo: ['m', a.id, a.fx, a.fy], redo: ['m', a.id, tx, ty] });
+          } else {
+            openLabelBar({ x: L.x, y: L.y }, a.id);
+          }
+        }
+      }
+
+      board.addEventListener('pointermove', onMove);
+      board.addEventListener('pointerup', onUp);
+      board.addEventListener('pointercancel', onUp);
+
+      function drawLive() {
+        if (!active) return;
+        var it = active.it;
+        if (active.kind === 'pen') {
+          liveG.innerHTML = '<path d="' + penPath(it.p, it.p.length / 3) + '" fill="none" stroke="' + it.c + '" stroke-width="' + it.w + '" stroke-linecap="round" stroke-linejoin="round"/>';
+        } else if (active.kind === 'arrow') {
+          liveG.innerHTML = arrowSvg(it.x1, it.y1, it.x2, it.y2, it.c, it.w);
+        }
+      }
+
+      function eraseAt(pt) {
+        var id = hitItem(pt, false);
+        if (id === null) return;
+        var op = ['d', now(), [id]];
+        log.push(op);
+        applyOp(op);
+        active.ids.push(id);
+        render();
+        updateUI();
+      }
+
+      // ---- label bar ----
+      var pending = null; // { x, y, editId }
+
+      function clampLabelX(x, s) {
+        var hw = Math.min(VW / 2 - 4, String(s || '').length * 7 + 8);
+        return Math.round(Math.max(hw, Math.min(VW - hw, x)));
+      }
+
+      function openLabelBar(pt, editId) {
+        pending = { x: pt.x, y: pt.y, editId: editId };
+        lbInput.value = editId !== null ? String(model.live[editId].s || '') : '';
+        byId('lb-ok').textContent = editId !== null ? 'Save' : 'Add';
+        byId('lb-del').className = 'lb-btn lb-del' + (editId !== null ? ' show' : '');
+        renderChips();
+        labelbar.className = 'labelbar show';
+        overlayG.innerHTML = editId !== null ? '' :
+          '<circle cx="' + pt.x + '" cy="' + pt.y + '" r="9" fill="#2e7d32" opacity="0.25"><animate attributeName="r" values="7;15;7" dur="1.4s" repeatCount="indefinite"/></circle>' +
+          '<circle cx="' + pt.x + '" cy="' + pt.y + '" r="4.5" fill="#2e7d32"/>';
+        // keep the tapped point visible: put the bar at the bottom if the tap was near the top
+        var rect = board.getBoundingClientRect();
+        var stageRect = byId('stage').getBoundingClientRect();
+        var m = board.getScreenCTM();
+        var screenY = m ? pt.y * m.d + m.f : rect.top;
+        if (screenY - stageRect.top < 120 && stageRect.height > 220) { labelbar.style.top = 'auto'; labelbar.style.bottom = '8px'; }
+        else { labelbar.style.top = '8px'; labelbar.style.bottom = 'auto'; }
+        setTimeout(function () { try { lbInput.focus({ preventScroll: true }); } catch (e) { lbInput.focus(); } }, 30);
+      }
+
+      function closeLabelBar() {
+        pending = null;
+        labelbar.className = 'labelbar';
+        overlayG.innerHTML = '';
+        try { lbInput.blur(); } catch (e) { /* ignore */ }
+      }
+
+      function renderChips() {
+        var labels = liveLabels(model), res = checkParts(parts, labels), html = '', i;
+        for (i = 0; i < res.length; i++) if (!res[i].label) html += '<button class="chip" type="button" data-part="' + esc(res[i].part) + '">' + esc(res[i].part) + '</button>';
+        byId('lb-chips').innerHTML = html;
+      }
+
+      function saveLabel(text) {
+        if (!pending) return;
+        var s = String(text || '').replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '').slice(0, 40);
+        var p = pending;
+        if (!s) { if (p.editId === null) { lbInput.focus(); toast('Type a name first'); } return; }
+        closeLabelBar();
+        if (p.editId !== null) {
+          var L = model.live[p.editId], from = String(L.s || '');
+          if (s !== from) commit(['e', p.editId, s], { undo: ['e', p.editId, from], redo: ['e', p.editId, s] });
+        } else {
+          var it = { id: nextId++, k: 'label', c: color, t: now(), x: clampLabelX(p.x, s), y: Math.max(14, Math.min(VH - 14, p.y)), s: s };
+          commit(['a', it], { undo: ['d', [it.id]], redo: ['r', [it.id]] });
+        }
+      }
+
+      byId('lb-ok').addEventListener('click', function () { saveLabel(lbInput.value); });
+      byId('lb-x').addEventListener('click', closeLabelBar);
+      byId('lb-del').addEventListener('click', function () {
+        if (!pending || pending.editId === null) return;
+        var id = pending.editId;
+        closeLabelBar();
+        commit(['d', [id]], { undo: ['r', [id]], redo: ['d', [id]] });
+      });
+      byId('lb-chips').addEventListener('click', function (e) {
+        var t = e.target;
+        if (t && t.getAttribute && t.getAttribute('data-part')) saveLabel(t.getAttribute('data-part'));
+      });
+      lbInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); saveLabel(lbInput.value); }
+        else if (e.key === 'Escape') { e.preventDefault(); closeLabelBar(); }
+      });
+
+      // ---- toolbar ----
+      function setTool(t) {
+        tool = t;
+        var btns = document.querySelectorAll('[data-tool]'), i;
+        for (i = 0; i < btns.length; i++) btns[i].className = 'tb tool' + (btns[i].getAttribute('data-tool') === t ? ' on' : '');
+        board.setAttribute('class', 't-' + t);
+        if (t !== 'label') closeLabelBar();
+        var tips = { pen: 'Pen: draw anywhere', arrow: 'Arrow: drag from the label to the part', label: 'Label: tap where the name goes. Drag a label to move it', eraser: 'Eraser: touch a mark to remove it' };
+        toast(tips[t]);
+      }
+
+      document.querySelector('.toolbar').addEventListener('click', function (e) {
+        var b = e.target;
+        while (b && b !== this && !(b.tagName === 'BUTTON')) b = b.parentNode;
+        if (!b || b === this) return;
+        var i, list;
+        if (b.getAttribute('data-tool')) setTool(b.getAttribute('data-tool'));
+        else if (b.getAttribute('data-color') !== null) {
+          color = COLORS[+b.getAttribute('data-color')] || COLORS[0];
+          list = document.querySelectorAll('[data-color]');
+          for (i = 0; i < list.length; i++) list[i].className = 'sw' + (list[i] === b ? ' on' : '');
+          if (tool === 'eraser') setTool('pen');
+        } else if (b.getAttribute('data-width') !== null) {
+          width = WIDTHS[+b.getAttribute('data-width')] || WIDTHS[0];
+          list = document.querySelectorAll('[data-width]');
+          for (i = 0; i < list.length; i++) list[i].className = 'tb wd' + (list[i] === b ? ' on' : '');
+          if (tool === 'eraser' || tool === 'label') setTool('pen');
+        } else if (b.id === 'undo') doUndo();
+        else if (b.id === 'redo') doRedo();
+        else if (b.id === 'clear') doClear();
+      });
+
+      function doUndo() {
+        if (active || !undoStack.length) return;
+        closeLabelBar();
+        var en = undoStack.pop();
+        commit(en.undo, null);
+        redoStack.push(en);
+        updateUI();
+      }
+      function doRedo() {
+        if (active || !redoStack.length) return;
+        closeLabelBar();
+        var en = redoStack.pop();
+        commit(en.redo, null);
+        undoStack.push(en);
+        updateUI();
+      }
+      function doClear() {
+        var ids = aliveIds(), btn = byId('clear');
+        if (!ids.length) return;
+        if (!clearArmed) {
+          clearArmed = true;
+          btn.className = 'tb armed';
+          toast('Tap the trash again to clear everything');
+          clearTimer = setTimeout(function () { clearArmed = false; btn.className = 'tb'; }, 3500);
+          return;
+        }
+        clearTimeout(clearTimer); clearArmed = false; btn.className = 'tb';
+        closeLabelBar();
+        commit(['d', ids], { undo: ['r', ids], redo: ['d', ids] });
+        toast('Cleared. Undo brings it back.');
+      }
+
+      document.addEventListener('keydown', function (e) {
+        var tag = (e.target && e.target.tagName) || '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); if (e.shiftKey) doRedo(); else doUndo(); }
+        else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); doRedo(); }
+      });
+
+      var toastTimer = null;
+      function toast(msg) {
+        var t = byId('toast');
+        t.textContent = msg;
+        t.className = 'toast show';
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () { t.className = 'toast'; }, 2200);
+      }
+      function hideCoach() { byId('coach').className = 'coach hide'; }
+
+      // ---- side panel ----
+      function renderParts() {
+        var html = '', i;
+        for (i = 0; i < parts.length; i++) {
+          html += '<li data-i="' + i + '"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>' + esc(parts[i]) + '</li>';
+        }
+        byId('parts').innerHTML = html;
+        prevDone = {};
+      }
+
+      function updateUI() {
+        var labels = liveLabels(model), res = checkParts(parts, labels), n = 0, i;
+        var lis = byId('parts').children;
+        for (i = 0; i < res.length; i++) {
+          var done = !!res[i].label;
+          if (done) n++;
+          if (lis[i]) lis[i].className = done ? (prevDone[i] ? 'done' : 'done pop') : '';
+          prevDone[i] = done;
+        }
+        var c = byId('count');
+        c.textContent = n + ' / ' + parts.length;
+        c.className = 'count' + (parts.length && n === parts.length ? ' all' : '');
+        byId('undo').disabled = !undoStack.length;
+        byId('redo').disabled = !redoStack.length;
+        byId('clear').disabled = !aliveIds().length;
+        if (aliveIds().length) hideCoach();
+        updateSubmit(labels);
+      }
+
+      function updateSubmit(labels) {
+        if (submitting) return;
+        labels = labels || liveLabels(model);
+        var hasAnswer = !!answerEl.value.replace(/\s+/g, '');
+        var ready = labels.length > 0 && hasAnswer && mode !== null;
+        var att = attempts();
+        var locked = submitted && att && att.canRetry === false;
+        submitBtn.disabled = !ready || locked;
+        if (!submitArmed) {
+          submitBtn.className = 'btn-submit';
+          submitBtn.textContent = retryMode ? 'Retry submit' : (locked ? 'Submitted ✓' : (submitted ? 'Submit again' : 'Submit'));
+        }
+        if (!retryMode) {
+          submitNote.className = 'submit-note' + (submitted ? ' ok' : '');
+          if (locked) submitNote.textContent = 'Submitted. Your teacher will grade it in SpeedGrader.';
+          else if (submitted) submitNote.textContent = 'Submitted' + (submittedAt ? ' ' + new Date(submittedAt).toLocaleString() : '') + '. You can still improve it and submit again.';
+          else if (!labels.length && !hasAnswer) submitNote.textContent = 'Add at least one label and answer the question to submit.';
+          else if (!labels.length) submitNote.textContent = 'Add at least one label on the diagram to submit.';
+          else if (!hasAnswer) submitNote.textContent = 'Answer the question to submit.';
+          else submitNote.textContent = 'Ready when you are. You can keep editing until you submit.';
+        }
+      }
+
+      function attempts() {
+        try { return (mode === 'live' && Zest.getAttempts) ? Zest.getAttempts() : null; } catch (e) { return null; }
+      }
+
+      var answerTimer = null;
+      answerEl.addEventListener('input', function () {
+        updateSubmit();
+        clearTimeout(answerTimer);
+        answerTimer = setTimeout(persist, 800);
+      });
+
+      // ---- persistence ----
+      var saveTimer = null;
+      function gatherState() {
+        return { v: 1, log: log, nextId: nextId, answer: answerEl.value, elapsed: now(), submitted: submitted, submittedAt: submittedAt };
+      }
+      function persist() {
+        if (mode !== 'live') return;
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(function () {
+          try { Zest.saveState(gatherState()); } catch (e) { /* ignore */ }
+        }, 600);
+      }
+      function persistNow() {
+        if (mode !== 'live') return;
+        clearTimeout(saveTimer);
+        try { Zest.saveState(gatherState()); } catch (e) { /* ignore */ }
+      }
+
+      function restoreState(st) {
+        if (!st || typeof st !== 'object') return false;
+        if (!(st.log && st.log.length) && !st.answer && !st.submitted) return false;
+        log = sortLog(st.log || []);
+        rebuild();
+        var maxId = 0, i;
+        for (i = 0; i < model.order.length; i++) if (model.order[i] > maxId) maxId = model.order[i];
+        nextId = Math.max(num(st.nextId, 1), maxId + 1);
+        answerEl.value = String(st.answer || '');
+        clockBase = num(st.elapsed); clockStart = Date.now();
+        submitted = !!st.submitted; submittedAt = st.submittedAt || null;
+        return true;
+      }
+
+      // ---- snapshot (small JPEG of the finished drawing for a quick look) ----
+      function snapshot(cb) {
+        var done = false;
+        function fin(v) { if (!done) { done = true; cb(v); } }
+        setTimeout(function () { fin(null); }, 4000);
+        try {
+          var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + VW + '" height="' + VH + '" viewBox="0 0 ' + VW + ' ' + VH + '">' +
+            board.querySelector('defs').outerHTML + byId('diagram').outerHTML + '<g>' + inkSvg(model) + '</g></svg>';
+          var img = new Image();
+          img.onload = function () {
+            try {
+              var cv = document.createElement('canvas');
+              cv.width = VW; cv.height = VH;
+              var cx = cv.getContext('2d');
+              cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, VW, VH);
+              cx.drawImage(img, 0, 0, VW, VH);
+              fin(cv.toDataURL('image/jpeg', 0.8));
+            } catch (e) { fin(null); }
+          };
+          img.onerror = function () { fin(null); };
+          img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        } catch (e) { fin(null); }
+      }
+
+      function buildArtifacts(cb) {
+        var labels = liveLabels(model), res = checkParts(parts, labels), counts = { pen: 0, arrow: 0, label: 0, erased: 0 }, i, L;
+        for (i = 0; i < model.order.length; i++) {
+          L = model.live[model.order[i]];
+          if (L.on) counts[L.it.k]++; else counts.erased++;
+        }
+        var matched = [];
+        for (i = 0; i < res.length; i++) if (res[i].label) matched.push(res[i].part);
+        var art = {
+          format: 'sketch-label/1',
+          view: [VW, VH],
+          events: log,
+          labels: labels,
+          answer: answerEl.value.replace(/^\s+|\s+$/g, ''),
+          question: question,
+          parts: parts,
+          partsLabelled: matched,
+          counts: counts,
+          timeSpentMs: now(),
+          snapshot: null
+        };
+        snapshot(function (url) {
+          art.snapshot = url && url.length < 400000 ? url : null;
+          cb(art);
+        });
+      }
+
+      // ---- submit ----
+      submitBtn.addEventListener('click', function () {
+        if (submitBtn.disabled || submitting) return;
+        if (!retryMode && !submitArmed) {
+          submitArmed = true;
+          submitBtn.className = 'btn-submit armed';
+          submitBtn.textContent = 'Tap again to submit';
+          submitArmTimer = setTimeout(function () { submitArmed = false; updateSubmit(); }, 4000);
+          return;
+        }
+        clearTimeout(submitArmTimer);
+        submitArmed = false;
+        doSubmit();
+      });
+
+      function doSubmit() {
+        submitting = true;
+        closeLabelBar();
+        submitBtn.disabled = true;
+        submitBtn.className = 'btn-submit';
+        submitBtn.textContent = 'Submitting…';
+        buildArtifacts(function (art) {
+          if (mode !== 'live') {
+            submitting = false;
+            retryMode = false;
+            try { sessionStorage.setItem(PREVIEW_KEY, JSON.stringify({ artifacts: art, submittedAt: new Date().toISOString() })); } catch (e) { /* ignore */ }
+            showResult(art, 'preview');
+            updateSubmit();
+            return;
+          }
+          var comment = 'Labelled ' + art.partsLabelled.length + ' of ' + art.parts.length + ' parts';
+          var p;
+          try { p = Zest.submitWork({ artifacts: art, comment: comment }); } catch (e) { p = null; }
+          if (!p || !p.then) { submitFailed('Could not reach Canvas.'); return; }
+          p.then(function (res) {
+            submitting = false;
+            if (res && res.success) {
+              retryMode = false;
+              submitted = true;
+              submittedAt = new Date().toISOString();
+              persistNow();
+              try { Zest.syncNow(); } catch (e) { /* the regular sync will catch up */ }
+              showResult(art, res.agsStatus || 'ok');
+              updateSubmit();
+            } else {
+              submitFailed(res && res.error);
+            }
+          }, function (err) { submitFailed(err && err.message); });
+        });
+      }
+
+      function submitFailed(msg) {
+        submitting = false;
+        retryMode = true;
+        updateSubmit();
+        submitNote.className = 'submit-note err';
+        submitNote.textContent = 'Not submitted yet' + (msg ? ' (' + msg + ')' : '') + '. Your drawing is safe here. Tap Retry submit.';
+      }
+
+      function showResult(art, status) {
+        var preview = status === 'preview';
+        byId('result-tag').innerHTML = preview ? '<span class="result-tag">Preview &middot; not submitted</span>' : '';
+        byId('result-icon').className = 'result-icon' + (preview ? ' preview' : '');
+        var title = byId('result-title');
+        title.className = preview ? 'preview' : '';
+        title.textContent = preview ? 'This is what students see' : 'Submitted for grading';
+        var text;
+        if (preview) text = 'In Canvas this goes to the teacher, who can replay the drawing stroke by stroke in SpeedGrader. Nothing was sent.';
+        else if (status === 'failed') text = 'Your work is saved. Canvas has not recorded the submission yet; it will update shortly, so there is no need to submit again.';
+        else if (status === 'skipped') text = 'Your work is saved. This page is not a graded assignment, so nothing goes to the gradebook.';
+        else text = 'Nice work! Your teacher will see your drawing, watch how you made it, and read your explanation.';
+        byId('result-text').textContent = text;
+        var img = byId('result-img');
+        if (art.snapshot) { img.src = art.snapshot; img.hidden = false; } else { img.hidden = true; }
+        byId('result-stats').innerHTML = '<span>' + art.partsLabelled.length + ' of ' + art.parts.length + ' parts labelled</span>' +
+          '<span>' + art.counts.arrow + ' arrow' + (art.counts.arrow === 1 ? '' : 's') + '</span>' +
+          '<span>' + fmtDuration(art.timeSpentMs) + '</span>';
+        byId('result-review').hidden = !preview;
+        byId('result').className = 'result show';
+      }
+      byId('result-back').addEventListener('click', function () { byId('result').className = 'result'; });
+
+      // ---- start-up: live (Canvas) or preview ----
+      function resetAll() {
+        log = []; nextId = 1; undoStack = []; redoStack = []; model = { live: {}, order: [] }; totalPoints = 0;
+        answerEl.value = '';
+        clockBase = 0; clockStart = Date.now();
+        submitted = false; submittedAt = null; submitting = false; retryMode = false; submitArmed = false;
+        active = null; liveG.innerHTML = '';
+        closeLabelBar();
+        byId('result').className = 'result';
+      }
+
+      function applySettings(p, q) {
+        parts = parseParts(p);
+        if (!parts.length) parts = parseParts(DEFAULT_PARTS);
+        question = String(q || '').replace(/^\s+|\s+$/g, '').slice(0, 300) || DEFAULT_QUESTION;
+        byId('qtext').textContent = question;
+        renderParts();
+      }
+
+      function startPreview() {
+        if (mode) return;
+        mode = 'preview';
+        resetAll();
+        applySettings(DEFAULT_PARTS, DEFAULT_QUESTION);
+        byId('preview-banner').className = 'banner preview show';
+        byId('sync').className = 'pill show';
+        byId('sync-dot').className = 'sync-dot preview';
+        byId('sync-text').textContent = 'Preview';
+        render(); updateUI();
+      }
+
+      function startLive() {
+        if (mode === 'live') return;
+        mode = 'live';
+        resetAll();
+        byId('preview-banner').className = 'banner preview';
+        var p = DEFAULT_PARTS, q = DEFAULT_QUESTION;
+        try { p = Zest.getParameter('parts', DEFAULT_PARTS); q = Zest.getParameter('question', DEFAULT_QUESTION); } catch (e) { /* defaults */ }
+        applySettings(p, q);
+        render(); updateUI();
+        var labels = { synced: 'Saved', dirty: 'Saving soon', syncing: 'Saving…', error: 'Offline: saved on this device', expired: 'Reopen from Canvas to keep saving' };
+        byId('sync').className = 'pill show';
+        byId('sync-dot').className = 'sync-dot synced';
+        byId('sync-text').textContent = 'Saved';
+        Zest.onSyncStatus(function (s) {
+          if (mode !== 'live') return;
+          byId('sync-dot').className = 'sync-dot ' + s;
+          byId('sync-text').textContent = labels[s] || s;
+        });
+        Zest.loadState().then(function (st) {
+          if (mode !== 'live' || log.length || answerEl.value) return;
+          if (restoreState(st)) {
+            render(); updateUI();
+            var b = byId('restored-banner');
+            b.className = 'banner restored show';
+            setTimeout(function () { b.className = 'banner restored'; }, 5000);
+          }
+        }, function () { /* no saved state */ });
+      }
+
+      renderParts();
+      setTool('pen');
+      byId('toast').className = 'toast';
+      render(); updateUI();
+
+      Zest.onReady(function () { startLive(); });
+      setTimeout(function () {
+        if (!mode && !Zest.isReady()) startPreview();
+      }, 1200);
+    })();
+  </script>
+</body>
+</html>

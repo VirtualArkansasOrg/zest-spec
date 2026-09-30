@@ -1,6 +1,6 @@
 # VLLA 2026 Outline
 
-Draft 4. Waiting on Kyle before building slides.
+Draft 5. Waiting on Kyle before building slides.
 
 - Session: From PhET to Keyboarding: How We Built an LTI Tool That Turns Any Web Interactive into a Gradable Canvas Assignment
 - Friday, October 2, 9:40 to 10:10 am, MacArthur room
@@ -25,19 +25,19 @@ Written to match Kyle's past decks (Beyond Chat, The Post-Star Trek Education) a
 |---|-------|------|-------|
 | 1 | Title | 0:15 | 0:15 |
 | 2 | About Me | 0:45 | 1:00 |
-| 3 | Who Builds Your Interactives? | 1:00 | 2:00 |
+| 3 | Are You Using AI to Build Interactives? | 1:00 | 2:00 |
 | 4 | One Sentence | 1:00 | 3:00 |
 | 5 | Let's Watch | 3:00 | 6:00 |
 | 6 | So What's the Catch? | 1:15 | 7:15 |
 | 7 | What is Zest? | 1:45 | 9:00 |
-| 8 | It Started with PhET | 1:00 | 10:00 |
+| 8 | How It Started | 1:00 | 10:00 |
 | 9 | Keyboarding Practice (live demo) | 3:00 | 13:00 |
 | 10 | One Package, Lots of Courses | 1:00 | 14:00 |
 | 11 | What Else Can You Make? | 0:20 | 14:20 |
 | 12-15 | Four zests, about 1:10 each | 4:40 | 19:00 |
-| 16 | Why Build It Ourselves? | 1:00 | 20:00 |
-| 17 | We Wrote It Down | 1:00 | 21:00 |
-| 18 | Challenges | 1:00 | 22:00 |
+| 16 | Why Build It Ourselves? | 0:45 | 19:45 |
+| 17 | Share Them With Other Programs | 1:30 | 21:15 |
+| 18 | Challenges | 0:45 | 22:00 |
 | 19 | Can You Trust What the AI Made? | 1:15 | 23:15 |
 | 20 | What's Next | 0:45 | 24:00 |
 | 21 | Want the Code? | 0:45 | 24:45 |
@@ -61,10 +61,10 @@ Same format as the Star Trek deck:
 
 [Kyle: update anything that's changed.]
 
-### 3. Who Builds Your Interactives?
-- Show of hands: who has a teacher with a great idea for a simulation or a game and no way to build it?
-- Most programs have a developer, pay a vendor, or go without.
-- AI changed that. A teacher can describe an activity and get a working one back.
+### 3. Are You Using AI to Build Interactives?
+- Show of hands: is anyone using AI to build their own interactives?
+- Follow-up: once you have one, how do you grade it?
+- A teacher can describe an activity to AI and get a working one back. Getting it into the gradebook is the hard part.
 
 ### 4. One Sentence
 The prompt, big on the slide:
@@ -101,13 +101,12 @@ Zest is an LTI 1.3 tool we built at Virtual Arkansas.
 Simple diagram: Canvas editor button → Zest (on your own server) → activity → gradebook and SpeedGrader.
 Notes: a package is a zip of HTML, CSS and JavaScript plus a small settings file. It can include its own SpeedGrader view, a settings page for teachers, and an answer key students can't see.
 
-### 8. It Started with PhET
-- We wanted PhET-style simulations that actually count for a grade
-- Explore mode: students save observations, the teacher grades them
-- Challenge mode: auto-graded
-- Once that worked, anything that runs in a browser could work too
+### 8. How It Started
+- We needed coding tools for our computer science courses to replace an expensive system
+- Then we added our keyboarding class
+- We're going to keep adding more
 
-[Kyle: which PhET work do you want to show, and which courses use it?]
+[Kyle: can the expensive system be named, or keep it generic? The session title says "From PhET to Keyboarding". Where does PhET fit in this story, or should the notes just explain the title?]
 
 ### 9. Keyboarding Practice (live demo)
 Live in Canvas, with a recording as a backup.
@@ -146,11 +145,15 @@ Echoes "Why go it alone?" from Beyond Chat.
 
 [Kyle: adjust these to your real reasons.]
 
-### 17. We Wrote It Down
-- The package format and how packages talk to Canvas are in a published specification
-- A package built for one Zest server runs on any other
-- The zest-creator template is what you saw in the recording
-- Both are public on GitHub [Kyle: show the links here, or keep them off?]
+### 17. Share Them With Other Programs
+This is the part to lean on with this audience.
+- A zest is a single file. Any program running Zest can upload it.
+- Your keyboarding activity can be my keyboarding activity. Grades and review work the same way on their server.
+- We wrote down the package format in a published specification, so it stays that way
+- The zest-creator template (what you saw in the recording) is public, so anyone can build them
+- Picture a shared library of gradable activities across virtual programs
+
+[Kyle: show the GitHub links for zest-spec and zest-creator here, or keep them off?]
 
 ### 18. Challenges
 - LTI and Canvas integration was most of the work (again)
@@ -175,6 +178,7 @@ Echoes "Why go it alone?" from Beyond Chat.
 ### 21. Want the Code?
 - QR code to the Google Form: [[FORM URL PLACEHOLDER]]
 - Short link under the QR code
+- If you build zests, we want to trade
 - kyle.yancey@virtualarkansas.org
 - Thank you for your time 😊
 - Small print: "Zest" and "Zestable" are trademarks of Virtual Arkansas (applications pending)
@@ -185,6 +189,7 @@ Leave the QR code up. Short answers go in the speaker notes. Likely questions:
 - Does student data go to the AI? (No. The AI only sees what the teacher types while building. The server has no AI in it.)
 - Who checks what the AI builds? Can it be wrong?
 - Hosting and cost
+- Can we share zests with you, or use yours?
 - Other LMSs
 - Accessibility
 - Support
@@ -213,7 +218,7 @@ Leave the QR code up. Short answers go in the speaker notes. Likely questions:
 ## Open Items
 1. Google Form URL
 2. Sandbox links for the four zests after upload
-3. PhET slide: what to show and which courses
+3. How It Started slide: name the old system or not, and where PhET fits
 4. GitHub links for zest-spec and zest-creator on slide 17: yes or no
 5. About Me: anything to change
 6. Slide 16: your real reasons for building it in-house

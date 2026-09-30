@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review: Graph Match</title>
+  <script src="/public/zest-bridge.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --ink: #1f2d3d; --mute: #5b6b7c; --line: #e3e8ee; --bg: #f4f6f9; --blue: #0770A2;
+      --target: #d6246e; --student: #0891b2; --ok: #1e8e4e; --okbg: #e3f5ea; --warn: #a66300; --warnbg: #fff3de; --bad: #c0392b; --badbg: #fdecea;
+      --pa: #b7791f; --ph: #2f855a; --pk: #6b46c1;
+      --math: "Cambria Math", "STIX Two Math", "Times New Roman", Georgia, serif;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--ink); padding: 16px; font-size: 14px; }
+    .sample { display: none; background: #fff3de; color: #7a4a00; border: 1px solid #f1d49b; border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; }
+    .sample.visible { display: block; }
+    .card { background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border: 1px solid var(--line); }
+    .head { display: flex; gap: 18px; align-items: center; justify-content: space-between; padding: 16px 18px; margin-bottom: 12px; flex-wrap: wrap; }
+    h1 { font-size: 19px; color: var(--blue); }
+    .who { margin-top: 3px; color: var(--mute); }
+    .who b { color: var(--ink); }
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .chip { font-size: 12px; background: #eef4f8; color: #33536b; border-radius: 999px; padding: 3px 9px; }
+    .score { text-align: right; }
+    .score .n { font-size: 34px; font-weight: 900; color: var(--blue); line-height: 1; }
+    .score .p { color: var(--mute); margin-top: 3px; font-size: 13px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 12px; }
+    .ch { display: grid; grid-template-columns: 170px 1fr; gap: 14px; padding: 12px; }
+    .ch svg { width: 170px; height: 170px; border-radius: 8px; border: 1px solid var(--line); background: #fbfcfe; display: block; }
+    .ttl { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .ttl b { font-size: 14px; }
+    .pill { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+    .pill.ok { background: var(--okbg); color: var(--ok); }
+    .pill.warn { background: var(--warnbg); color: var(--warn); }
+    .pill.bad { background: var(--badbg); color: var(--bad); }
+    .eq { font-family: var(--math); font-size: 17px; margin: 2px 0; }
+    .eq small { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 11px; color: var(--mute); display: inline-block; width: 58px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .eq.t { color: var(--target); } .eq.s { color: var(--student); }
+    table { border-collapse: collapse; width: 100%; margin-top: 6px; font-size: 13px; }
+    th, td { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: center; }
+    th { background: #f0f7fb; font-weight: 600; color: #33536b; }
+    td.pn { font-family: var(--math); font-style: italic; font-size: 17px; font-weight: 700; }
+    tr[data-p="a"] td.pn { color: var(--pa); } tr[data-p="h"] td.pn { color: var(--ph); } tr[data-p="k"] td.pn { color: var(--pk); }
+    .y { color: var(--ok); font-weight: 800; } .x { color: var(--bad); font-weight: 800; } .lk { color: var(--mute); font-size: 12px; }
+    .meta { margin-top: 6px; font-size: 12px; color: var(--mute); }
+    .legend { display: flex; gap: 14px; font-size: 12px; color: var(--mute); margin: 0 2px 10px; }
+    .legend i { display: inline-block; width: 18px; vertical-align: middle; margin-right: 5px; border-top: 3px dashed var(--target); }
+    .legend i.s { border-top: 3px solid var(--student); }
+    .msg { padding: 24px; text-align: center; color: var(--mute); }
+    @media (max-width: 520px) {
+      .grid { grid-template-columns: 1fr; }
+      .ch { grid-template-columns: 1fr; }
+      .ch svg { width: 100%; height: auto; max-width: 260px; margin: 0 auto; }
+      .score { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <div class="sample" id="sample"><b>Sample submission (preview).</b> In SpeedGrader this page shows the real student&rsquo;s graphs.</div>
+  <div id="review-content"><div class="card msg">Loading submission&hellip;</div></div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var PARENTS = {
+      linear:    { label: 'Linear',         f: function (u) { return u; } },
+      abs:       { label: 'Absolute value', f: function (u) { return Math.abs(u); } },
+      quadratic: { label: 'Quadratic',      f: function (u) { return u * u; } },
+      sqrt:      { label: 'Square root',    f: function (u) { return u < 0 ? NaN : Math.sqrt(u); } },
+      cubic:     { label: 'Cubic',          f: function (u) { return u * u * u; } },
+      sine:      { label: 'Sine',           f: function (u) { return Math.sin(u); } }
+    };
+    var MINUS = '−';
+    var SAMPLE = {
+      score: 7, maxScore: 10, userName: 'Avery Student', submittedAt: '2026-10-01T15:42:00.000Z',
+      comment: 'Graph Match: 7/10 points (4 of 5 graphs matched)',
+      artifacts: {
+        version: '1.0', title: 'Graph Match: Transformations',
+        settings: { tolerance: 0.1, maxChecks: 3, allowHints: true, showEquation: true },
+        points: 7, maxPoints: 10, percent: 70,
+        challenges: [
+          { parent: 'quadratic', target: { a: 1, h: 3, k: -2 }, unlocked: ['h', 'k'], final: { a: 1, h: 3, k: -2 }, status: 'matched', matched: true, hintUsed: false, checks: 1, points: 2 },
+          { parent: 'abs', target: { a: 2, h: -1, k: -3 }, unlocked: ['a', 'h', 'k'], final: { a: 2, h: -1, k: -3 }, status: 'matched', matched: true, hintUsed: true, checks: 3, points: 1 },
+          { parent: 'sqrt', target: { a: -2, h: -4, k: 3 }, unlocked: ['a', 'h', 'k'], final: { a: -2, h: -4, k: 3 }, status: 'matched', matched: true, hintUsed: false, checks: 2, points: 2 },
+          { parent: 'cubic', target: { a: 0.5, h: 1, k: -2 }, unlocked: ['a', 'h', 'k'], final: { a: 1, h: 1, k: -2 }, status: 'missed', matched: false, hintUsed: false, checks: 3, points: 0 },
+          { parent: 'sine', target: { a: -2, h: 1, k: 1 }, unlocked: ['a', 'h', 'k'], final: { a: -2, h: 1, k: 1 }, status: 'matched', matched: true, hintUsed: false, checks: 1, points: 2 }
+        ]
+      }
+    };
+
+    function esc(s) { var d = document.createElement('div'); d.textContent = String(s == null ? '' : s); return d.innerHTML; }
+    function isNum(n) { return typeof n === 'number' && isFinite(n); }
+    function num(n) { return String(Math.round(Math.abs(n) * 1000) / 1000); }
+    function sgn(n) { return (n < 0 ? MINUS : '') + num(n); }
+    function has(arr, v) { if (!arr) return false; for (var i = 0; i < arr.length; i++) { if (arr[i] === v) return true; } return false; }
+
+    function equation(parent, a, h, k) {
+      if (a === 0) return 'y = ' + sgn(k);
+      var coef = a === 1 ? '' : (a === -1 ? MINUS : sgn(a));
+      var inner = h === 0 ? 'x' : (h > 0 ? 'x ' + MINUS + ' ' + num(h) : 'x + ' + num(h));
+      var body;
+      if (parent === 'linear') body = h === 0 ? coef + 'x' : coef + '(' + inner + ')';
+      else if (parent === 'quadratic') body = h === 0 ? coef + 'x²' : coef + '(' + inner + ')²';
+      else if (parent === 'cubic') body = h === 0 ? coef + 'x³' : coef + '(' + inner + ')³';
+      else if (parent === 'abs') body = coef + '|' + inner + '|';
+      else if (parent === 'sqrt') body = coef + '√' + (h === 0 ? 'x' : '(' + inner + ')');
+      else body = coef + ((a === 1 || a === -1) ? '' : ' ') + 'sin' + (h === 0 ? ' x' : '(' + inner + ')');
+      return 'y = ' + body + (k === 0 ? '' : (k > 0 ? ' + ' + num(k) : ' ' + MINUS + ' ' + num(k)));
+    }
+    function evalAt(parent, a, h, k, x) { var v = PARENTS[parent].f(x - h); return isNaN(v) ? NaN : a * v + k; }
+    function GX(x) { return (x + 10) * 20; }
+    function GY(y) { return (10 - y) * 20; }
+    function curvePath(parent, p) {
+      var d = '', pen = false, x0 = -10.5, i, x, y;
+      if (parent === 'sqrt' && p.h > x0) x0 = p.h;
+      for (i = 0; ; i++) {
+        x = x0 + i * 0.05;
+        if (x > 10.5) break;
+        y = evalAt(parent, p.a, p.h, p.k, x);
+        if (isNaN(y)) { pen = false; continue; }
+        if (y > 60) y = 60; if (y < -60) y = -60;
+        d += (pen ? 'L' : 'M') + GX(x).toFixed(1) + ' ' + GY(y).toFixed(1);
+        pen = true;
+      }
+      return d;
+    }
+    function miniGraph(parent, t, s) {
+      var g = '<svg viewBox="0 0 400 400" role="img" aria-label="Target and student curves">', i, p;
+      for (i = -10; i <= 10; i++) {
+        if (i === 0) continue;
+        p = GX(i);
+        var o = i % 5 === 0 ? '#d5dde6' : '#edf1f5';
+        g += '<line x1="' + p + '" y1="0" x2="' + p + '" y2="400" stroke="' + o + '" stroke-width="1.5"/><line x1="0" y1="' + p + '" x2="400" y2="' + p + '" stroke="' + o + '" stroke-width="1.5"/>';
+      }
+      g += '<line x1="0" y1="200" x2="400" y2="200" stroke="#7b8a99" stroke-width="2.5"/><line x1="200" y1="0" x2="200" y2="400" stroke="#7b8a99" stroke-width="2.5"/>';
+      g += '<text x="' + GX(5) + '" y="222" font-size="18" fill="#7b8a99" text-anchor="middle">5</text><text x="190" y="' + (GY(5) + 6) + '" font-size="18" fill="#7b8a99" text-anchor="end">5</text>';
+      g += '<clipPath id="c"><rect width="400" height="400"/></clipPath><g clip-path="url(#c)">';
+      g += '<path d="' + curvePath(parent, t) + '" fill="none" stroke="#d6246e" stroke-opacity="0.18" stroke-width="16" stroke-linecap="round"/>';
+      g += '<path d="' + curvePath(parent, t) + '" fill="none" stroke="#d6246e" stroke-width="6" stroke-dasharray="16 10" stroke-linecap="round"/>';
+      if (s) g += '<path d="' + curvePath(parent, s) + '" fill="none" stroke="#0891b2" stroke-width="4" stroke-linecap="round"/>';
+      return g + '</g></svg>';
+    }
+
+    function validParams(p) { return p && isNum(p.a) && isNum(p.h) && isNum(p.k); }
+
+    function render(sub, isSample) {
+      var root = document.getElementById('review-content');
+      var a = (sub && sub.artifacts) || {};
+      var chs = (a.challenges && a.challenges.length) ? a.challenges : null;
+      var settings = a.settings || null, settingsSrc = 'as the student saw them';
+      if (!settings) {
+        var live = null;
+        try { live = Zest.getAssessmentConfig(); } catch (e) { live = null; }
+        if (live) { settings = live; settingsSrc = 'current settings (not recorded with this submission)'; }
+      }
+      var when = sub.submittedAt ? new Date(sub.submittedAt) : null;
+      var score = isNum(sub.score) ? sub.score : a.points;
+      var max = isNum(sub.maxScore) ? sub.maxScore : a.maxPoints;
+      var matched = chs ? chs.filter(function (c) { return c.matched; }).length : 0;
+      var h = '<div class="card head"><div>' +
+        '<h1>' + esc(a.title || 'Graph Match') + ' &mdash; Teacher Review</h1>' +
+        '<div class="who"><b>' + esc(sub.userName || 'Student') + '</b>' + (when && !isNaN(when.getTime()) ? ' &middot; submitted ' + esc(when.toLocaleString()) : '') + '</div>';
+      if (settings) {
+        h += '<div class="chips" title="Settings ' + esc(settingsSrc) + '">' +
+          '<span class="chip">Tolerance &plusmn;' + esc(settings.tolerance) + '</span>' +
+          '<span class="chip">' + (settings.maxChecks > 0 ? esc(settings.maxChecks) + ' checks per graph' : 'Unlimited checks') + '</span>' +
+          '<span class="chip">Hints ' + (settings.allowHints ? 'on' : 'off') + '</span>' +
+          '<span class="chip">Live equation ' + (settings.showEquation ? 'shown' : 'hidden') + '</span>' +
+          '<span class="chip" style="background:transparent;color:#7b8a99">settings ' + esc(settingsSrc) + '</span></div>';
+      }
+      h += '</div><div class="score"><div class="n">' + (isNum(score) ? esc(score) : '&ndash;') + ' / ' + (isNum(max) ? esc(max) : '&ndash;') + '</div>' +
+        '<div class="p">' + (isNum(score) && isNum(max) && max > 0 ? Math.round(score / max * 100) + '% &middot; ' : '') + (chs ? matched + ' of ' + chs.length + ' graphs matched' : '') + '</div>' +
+        '<div class="p">2 pts no hint &middot; 1 pt with hint</div></div></div>';
+
+      if (!chs) {
+        h += '<div class="card msg">This submission has no per-graph details' + (sub.comment ? ': ' + esc(sub.comment) : '.') + '</div>';
+        root.innerHTML = h;
+        return;
+      }
+      h += '<div class="legend"><span><i></i>Target</span><span><i class="s"></i>Student&rsquo;s submitted graph</span></div><div class="grid">';
+      chs.forEach(function (c, i) {
+        if (!c || !PARENTS[c.parent] || !validParams(c.target)) {
+          h += '<div class="card ch"><div class="msg">Graph ' + (i + 1) + ': unreadable data.</div></div>';
+          return;
+        }
+        var t = c.target, s = validParams(c.final) ? c.final : null;
+        var pill = c.matched ? (c.hintUsed ? '<span class="pill warn">Matched with hint &middot; ' + esc(c.points) + ' pt</span>' : '<span class="pill ok">Matched &middot; ' + esc(c.points) + ' pts</span>')
+          : '<span class="pill bad">' + (c.status === 'open' ? 'Not finished' : 'Not matched') + ' &middot; 0 pts</span>';
+        var rows = ['a', 'h', 'k'].map(function (p) {
+          var locked = c.unlocked && !has(c.unlocked, p);
+          var same = s && Math.abs(s[p] - t[p]) < 1e-9;
+          var mark = locked ? '<span class="lk">locked</span>' : (same ? '<span class="y">&#10003;</span>' : '<span class="x">&#10007;</span>');
+          return '<tr data-p="' + p + '"><td class="pn">' + p + '</td><td>' + sgn(t[p]) + '</td><td>' + (s ? sgn(s[p]) : '&ndash;') + '</td><td>' + mark + '</td></tr>';
+        }).join('');
+        var note = '';
+        if (c.matched && s && (Math.abs(s.h - t.h) > 1e-9 || Math.abs(s.k - t.k) > 1e-9 || Math.abs(s.a - t.a) > 1e-9)) note = ' &middot; same curve, different a/h/k';
+        h += '<div class="card ch">' + miniGraph(c.parent, t, s) + '<div>' +
+          '<div class="ttl"><b>' + (i + 1) + '. ' + PARENTS[c.parent].label + '</b>' + pill + '</div>' +
+          '<div class="eq t"><small>Target</small>' + esc(equation(c.parent, t.a, t.h, t.k)) + '</div>' +
+          '<div class="eq s"><small>Student</small>' + (s ? esc(equation(c.parent, s.a, s.h, s.k)) : '&ndash;') + '</div>' +
+          '<table><tr><th></th><th>Target</th><th>Student</th><th></th></tr>' + rows + '</table>' +
+          '<div class="meta">' + esc(c.checks) + ' check' + (c.checks === 1 ? '' : 's') + ' &middot; hint ' + (c.hintUsed ? 'used' : 'not used') + note + '</div>' +
+          '</div></div>';
+      });
+      h += '</div>';
+      root.innerHTML = h;
+    }
+
+    var done = false;
+    function showSample() {
+      if (done) return;
+      done = true;
+      document.getElementById('sample').classList.add('visible');
+      render(SAMPLE, true);
+    }
+    function showLive() {
+      done = true;
+      document.getElementById('sample').classList.remove('visible');
+      var root = document.getElementById('review-content');
+      if (!Zest.isReviewMode()) {
+        root.innerHTML = '<div class="card msg">This page is only available in SpeedGrader review mode.</div>';
+        return;
+      }
+      var sub = Zest.getSubmission();
+      if (!sub) {
+        root.innerHTML = '<div class="card msg">No submission found for this student yet.</div>';
+        return;
+      }
+      render(sub, false);
+    }
+
+    if (window.Zest && typeof Zest.onReady === 'function') {
+      Zest.onReady(function () { showLive(); });
+      setTimeout(function () { if (!done && !(Zest.isReady && Zest.isReady())) showSample(); }, 1200);
+    } else {
+      showSample();
+    }
+  })();
+  </script>
+</body>
+</html>

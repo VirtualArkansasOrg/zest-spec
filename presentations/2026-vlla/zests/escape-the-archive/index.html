@@ -95,6 +95,17 @@
     .chip.open .st { color: var(--ok); }
     .chip-ico { flex: 0 0 auto; }
     .progress-line { display: none; }
+    @media (max-width: 759px) {
+      .chip { flex-direction: column; justify-content: center; text-align: center; gap: 0; padding: 5px 3px; }
+      .chip-ico { display: none; }
+      .chip b { font-size: 12px; white-space: nowrap; }
+      .chip .st { display: block; }
+    }
+    @media (max-width: 520px) {
+      #lockcount { display: none; }
+      .brand h1 { font-size: 18px; }
+      .brand small { letter-spacing: .5px; }
+    }
 
     .panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px 12px 18px; }
 
@@ -132,14 +143,14 @@
       content: ""; position: absolute; top: -7px; left: 50%; width: 70px; height: 16px; margin-left: -35px;
       background: rgba(235,225,190,.75); box-shadow: 0 1px 2px rgba(0,0,0,.2); transform: rotate(1.5deg);
     }
-    .doc-tag { font-family: var(--mono); font-size: 10.5px; letter-spacing: 1.5px; text-transform: uppercase; color: #8a5a22; margin-bottom: 6px; }
+    .doc-tag { padding-right: 84px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 1.5px; text-transform: uppercase; color: #8a5a22; margin-bottom: 6px; }
     .doc q, .doc .quote { display: block; font-family: var(--serif); font-size: 16px; line-height: 1.5; font-style: italic; quotes: "\201C" "\201D"; }
     .doc .title-line { font-family: var(--serif); font-size: 14px; margin-bottom: 8px; }
     .doc .summary { font-family: var(--serif); font-size: 14px; line-height: 1.5; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(90,60,20,.35); }
     .doc .summary .lbl { font-family: var(--mono); font-size: 10px; letter-spacing: 1.3px; text-transform: uppercase; color: #8a5a22; display: block; margin-bottom: 2px; }
     .doc .cite { margin-top: 10px; font-size: 12px; color: #6b4e2c; border-top: 1px solid rgba(90,60,20,.3); padding-top: 6px; }
     .doc .stamp {
-      position: absolute; right: 10px; bottom: 30px; font-family: var(--mono); font-size: 11px; font-weight: 700;
+      position: absolute; right: 12px; top: 10px; font-family: var(--mono); font-size: 11px; font-weight: 700;
       color: rgba(160,40,30,.55); border: 2px solid rgba(160,40,30,.45); border-radius: 4px; padding: 1px 6px;
       transform: rotate(-9deg); letter-spacing: 1.5px; pointer-events: none;
     }
@@ -278,6 +289,11 @@
     .status.ok { background: #16301f; border: 1px solid #2f7a55; color: #bff0d3; }
     .status.warn { background: #3a2c12; border: 1px solid #7a5a1f; color: #f7dfa6; }
     .status.err { background: #3a1c18; border: 1px solid #8a3a2f; color: #ffc9c1; }
+    #result { background: rgba(8,5,3,.5); }
+    @media (min-width: 760px) {
+      #result { justify-content: flex-end; padding-right: 22px; }
+      #result .card { max-width: 500px; }
+    }
     .toast {
       position: absolute; left: 50%; top: 64px; transform: translateX(-50%); z-index: 30; display: none;
       background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; border-radius: 8px; padding: 8px 14px; font-size: 13px;
@@ -746,7 +762,7 @@
     h += '<div class="clue"><span class="lbl">Clue</span>' + L.clue + '</div>';
     h += '<div class="mech' + (st.open ? ' unlocked' : '') + '" id="mech">' + mechHtml(L, st) + '</div>';
     if (st.open) {
-      h += '<div class="open-banner">✓ Unlocked with <b>' + displayValue(L, st.entry) + '</b> · +' + lockPoints(L.id) + ' points' + (st.hint ? ' (hint used)' : '') + '</div>';
+      h += '<div class="open-banner">✓ ' + (L.kind === 'order' ? 'Unlocked: the archive is back in order' : 'Unlocked with <b>' + displayValue(L, st.entry) + '</b>') + ' · +' + lockPoints(L.id) + ' points' + (st.hint ? ' (hint used)' : '') + '</div>';
     } else {
       var ready = currentValue(L, st) !== null;
       h += '<div class="actions"><button class="btn btn-primary" data-act="try"' + (ready ? '' : ' disabled') + '>Try to open</button>';
@@ -1119,8 +1135,8 @@
   function showResult() {
     var escaped = S.escaped, score = totalScore();
     var h = '';
-    h += '<svg width="64" height="64" viewBox="0 0 40 46" aria-hidden="true" style="margin:0 auto 4px;display:block">' +
-      '<path d="M11 20 V12 a9 9 0 0 1 18 0 V20" fill="none" stroke="#c9ccd2" stroke-width="4.5" ' + (escaped ? 'transform="translate(0,-6) rotate(-28 29 20)"' : '') + '/>' +
+    h += '<svg width="64" height="74" viewBox="0 -8 40 54" aria-hidden="true" style="margin:0 auto 4px;display:block">' +
+      '<path d="M11 20 V12 a9 9 0 0 1 18 0 V20" fill="none" stroke="#c9ccd2" stroke-width="4.5" ' + (escaped ? 'transform="translate(0,-7)"' : '') + '/>' +
       '<rect x="5" y="18" width="30" height="25" rx="5" fill="' + (escaped ? '#2f9a67' : '#d9a84a') + '"/></svg>';
     if (escaped) h += '<h2>You escaped the archive!</h2>';
     else if (S.timedOut) h += '<h2>Time’s up!</h2>';

@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Graph Match: Settings Editor</title>
+  <script src="/public/zest-bridge.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    :root {
+      --bg: #1a1a2e; --card: #16213e; --card2: #0f1a36; --border: #0f3460; --ink: #e0e0e0; --mute: #9aa3c0;
+      --accent: #e94560; --accent2: #c23152; --ok: #3ddc84; --warn: #ffb547; --bad: #ff6b7a;
+      --target: #ff4fa3; --student: #2ee6ff; --pa: #ffd166; --ph: #7cf29c; --pk: #c4a5ff;
+      --math: "Cambria Math", "STIX Two Math", "Times New Roman", Georgia, serif;
+    }
+    html, body { height: 100%; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--ink); font-size: 15px; }
+    #wrap { height: 100%; display: flex; flex-direction: column; }
+    .banner { display: none; background: #4a3300; color: #ffe2a3; font-size: 13px; text-align: center; padding: 7px 12px; border-bottom: 1px solid rgba(255,200,90,0.35); }
+    .banner.visible { display: block; }
+    .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .page { max-width: 1180px; margin: 0 auto; padding: 20px 16px 24px; }
+    header.ph { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+    .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mute); }
+    h1 { color: var(--accent); font-size: 24px; margin: 2px 0 4px; letter-spacing: -0.01em; }
+    .intro { color: var(--mute); font-size: 14px; max-width: 92ch; line-height: 1.45; }
+    .pill { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: rgba(154,163,192,0.15); color: var(--mute); }
+    .pill.override { background: rgba(61,220,132,0.15); color: var(--ok); }
+    .pill.default { background: rgba(233,69,96,0.15); color: var(--accent); }
+    .editor-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 14px; }
+    h2 { color: var(--accent); font-size: 16px; margin-bottom: 12px; }
+    .settings { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; }
+    .field label, .flabel { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; }
+    .hint { font-size: 12px; color: var(--mute); margin-top: 4px; line-height: 1.35; }
+    input[type="text"], input[type="number"], select {
+      width: 100%; padding: 9px 12px; background: var(--border); border: 1px solid #1a3a5c; border-radius: 8px;
+      color: var(--ink); font-size: 15px; font-family: inherit; min-height: 40px;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(233,69,96,0.25); }
+    input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px; vertical-align: middle; }
+    .toggles { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 14px; }
+    .toggle { display: flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer; }
+    .chlist { display: grid; gap: 12px; }
+    .ch { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .ch.invalid { border-color: var(--bad); }
+    .ch-top { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(15,52,96,0.45); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .ch-num { font-weight: 800; color: var(--accent); font-size: 15px; min-width: 64px; }
+    .ch-top select { width: auto; min-width: 170px; flex: 1; max-width: 240px; }
+    .ch-top .sp { flex: 1; }
+    .ibtn { background: transparent; color: var(--mute); border: 1px solid #2a3f6b; border-radius: 8px; min-width: 38px; height: 38px; font-size: 16px; cursor: pointer; padding: 0 10px; }
+    .ibtn:hover:not(:disabled) { color: #fff; border-color: #4a6aa8; }
+    .ibtn:disabled { opacity: 0.3; cursor: default; }
+    .ibtn.del { color: var(--bad); border-color: rgba(255,107,122,0.4); }
+    .ibtn.del.armed { background: rgba(255,107,122,0.15); border-color: var(--bad); font-size: 13px; font-weight: 700; }
+    .ch-body { display: grid; grid-template-columns: 1fr 230px; gap: 16px; padding: 14px; align-items: start; }
+    .prow { display: grid; grid-template-columns: 34px 38px 90px 38px 1fr; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .prow .pn { font-family: var(--math); font-style: italic; font-size: 24px; text-align: center; }
+    .prow[data-p="a"] .pn { color: var(--pa); } .prow[data-p="h"] .pn { color: var(--ph); } .prow[data-p="k"] .pn { color: var(--pk); }
+    .prow input[type="number"] { text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; padding: 8px 4px; }
+    .prow .unl { font-size: 13px; color: var(--mute); display: flex; align-items: center; gap: 6px; cursor: pointer; padding-left: 6px; }
+    .eqline { font-family: var(--math); font-size: 22px; margin: 4px 0 6px; }
+    .eqline .ca { color: var(--pa); } .eqline .ch2 { color: var(--ph); } .eqline .ck { color: var(--pk); }
+    .eqcap { font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: 0.08em; }
+    .err { color: var(--bad); font-size: 13px; margin-top: 6px; line-height: 1.35; }
+    .pv { width: 230px; height: 230px; border-radius: 10px; background: radial-gradient(circle at 50% 40%, #14224d 0%, #0a1330 75%); border: 1px solid var(--border); display: block; }
+    .pvcap { font-size: 11px; color: var(--mute); margin-top: 5px; display: flex; gap: 12px; justify-content: center; }
+    .pvcap i { display: inline-block; width: 16px; border-top: 3px dashed var(--target); vertical-align: middle; margin-right: 4px; }
+    .pvcap i.s { border-top: 2px dotted var(--student); }
+    .addrow { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+    .btn-add { background: transparent; color: var(--ink); border: 1px dashed #4a6aa8; border-radius: 10px; padding: 11px 18px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .btn-add:hover:not(:disabled) { border-color: var(--accent); color: #fff; }
+    .btn-add:disabled { opacity: 0.4; cursor: default; }
+    .bar { flex: none; background: #121a33; border-top: 1px solid var(--border); padding: 10px 16px; }
+    .bar-in { max-width: 1180px; margin: 0 auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .btn-save { background: var(--accent); color: white; border: none; padding: 11px 26px; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; min-height: 42px; }
+    .btn-save:hover:not(:disabled) { background: var(--accent2); }
+    .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-reset { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; min-height: 42px; }
+    .btn-reset.armed { background: rgba(233,69,96,0.18); font-weight: 700; }
+    .btn-cancel { background: transparent; color: #aab; border: 1px solid #333c5c; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; min-height: 42px; }
+    .status { flex: 1; min-width: 200px; font-size: 13px; color: var(--mute); }
+    .status.ok { color: var(--ok); font-weight: 600; } .status.bad { color: var(--bad); font-weight: 600; } .status.warn { color: var(--warn); font-weight: 600; }
+    .cols { display: grid; grid-template-columns: 300px 1fr; gap: 14px; align-items: start; }
+    .cols > section:first-child { position: sticky; top: 0; }
+    .cols .settings { grid-template-columns: 1fr; }
+    .cols .toggles { flex-direction: column; gap: 12px; }
+    .cols .toggle { align-items: flex-start; }
+    .cols .toggle input { margin-top: 1px; flex: none; }
+    .ch-body { grid-template-columns: 1fr 210px; }
+    .pv { width: 210px; height: 210px; }
+    .lshort { display: none; }
+    @media (max-width: 720px) { .lshort { display: inline; } }
+    .loading { padding: 40px; text-align: center; color: var(--mute); }
+    @media (max-width: 900px) {
+      .cols { grid-template-columns: 1fr; }
+      .cols > section:first-child { position: static; }
+      .cols .settings { grid-template-columns: 2fr 1fr 1fr; }
+      .cols .toggles { flex-direction: row; }
+    }
+    @media (max-width: 720px) {
+      .cols .settings { grid-template-columns: 1fr 1fr; }
+      .settings { grid-template-columns: 1fr 1fr; }
+      .settings .field:first-child { grid-column: 1 / -1; }
+      .ch-body { grid-template-columns: 1fr; }
+      .pv { width: 100%; height: auto; aspect-ratio: 1 / 1; max-width: 320px; margin: 0 auto; }
+      .ch-top select { max-width: none; }
+      h1 { font-size: 21px; }
+      .bar .btn-cancel { display: none; }
+      .prow { grid-template-columns: 30px 38px 72px 38px 1fr; }
+      .lfull { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <div class="banner" id="preview-banner"><b>Preview:</b> this is the teacher settings editor. Settings are not saved in preview.</div>
+    <div class="scroll">
+      <div class="page">
+        <header class="ph">
+          <div>
+            <div class="eyebrow">Graph Match &middot; Settings</div>
+            <h1>Choose the target graphs</h1>
+            <p class="intro">Each graph is a target <span style="font-family:var(--math);font-size:16px;color:#fff">y = a&thinsp;f(x &minus; h) + k</span>. Students start from the parent function (a = 1, h = 0, k = 0) and move only the sliders you unlock; locked sliders are already set to the target. Changes apply to every assignment that uses this zest.</p>
+          </div>
+          <span class="pill" id="source-pill">loading</span>
+        </header>
+
+        <div id="loading" class="loading">Loading settings&hellip;</div>
+        <div id="editor" class="cols" hidden>
+          <section class="editor-card">
+            <h2>Game settings</h2>
+            <div class="settings">
+              <div class="field">
+                <label for="f-title">Title students see</label>
+                <input type="text" id="f-title" maxlength="80" placeholder="Graph Match: Transformations">
+              </div>
+              <div class="field">
+                <label for="f-tol">Match tolerance</label>
+                <select id="f-tol">
+                  <option value="0.1">Exact (0.1)</option>
+                  <option value="0.25">Close (0.25)</option>
+                  <option value="0.5">Generous (0.5)</option>
+                </select>
+                <p class="hint">How far (in grid units) the student&rsquo;s curve may be from the target anywhere on screen.</p>
+              </div>
+              <div class="field">
+                <label for="f-checks">Checks per graph</label>
+                <select id="f-checks">
+                  <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                  <option value="4">4</option><option value="5">5</option><option value="0">Unlimited</option>
+                </select>
+                <p class="hint">Running out scores 0 for that graph and reveals the answer.</p>
+              </div>
+            </div>
+            <div class="toggles">
+              <label class="toggle"><input type="checkbox" id="f-hints"> Allow hints (a match after a hint earns 1 of 2 points)</label>
+              <label class="toggle"><input type="checkbox" id="f-eq"> Show the student&rsquo;s equation live as they move sliders</label>
+            </div>
+          </section>
+
+          <section class="editor-card">
+            <h2 id="ch-heading">Target graphs</h2>
+            <div class="chlist" id="chlist"></div>
+            <div class="addrow">
+              <button class="btn-add" id="btn-add" type="button">+ Add a graph</button>
+              <span class="hint" id="add-hint">Up to 12 graphs. Each is worth 2 points.</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+    <div class="bar">
+      <div class="bar-in">
+        <button class="btn-save" id="btn-save" type="button" disabled>Save settings</button>
+        <button class="btn-reset" id="btn-reset" type="button">Reset to default</button>
+        <button class="btn-cancel" id="btn-reload" type="button">Reload</button>
+        <span class="status" id="status" aria-live="polite"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var DEFAULT_CONFIG = {
+      version: '1.0',
+      title: 'Graph Match: Transformations',
+      tolerance: 0.1,
+      maxChecks: 3,
+      allowHints: true,
+      showEquation: true,
+      challenges: [
+        { parent: 'quadratic', a: 1, h: 3, k: -2, unlocked: ['h', 'k'] },
+        { parent: 'abs', a: 2, h: -1, k: -3, unlocked: ['a', 'h', 'k'] },
+        { parent: 'sqrt', a: -2, h: -4, k: 3, unlocked: ['a', 'h', 'k'] },
+        { parent: 'cubic', a: 0.5, h: 1, k: -2, unlocked: ['a', 'h', 'k'] },
+        { parent: 'sine', a: -2, h: 1, k: 1, unlocked: ['a', 'h', 'k'] }
+      ]
+    };
+    var PARENTS = {
+      linear:    { label: 'Linear: f(x) = x',            f: function (u) { return u; } },
+      abs:       { label: 'Absolute value: f(x) = |x|',  f: function (u) { return Math.abs(u); } },
+      quadratic: { label: 'Quadratic: f(x) = x²',   f: function (u) { return u * u; } },
+      sqrt:      { label: 'Square root: f(x) = √x', f: function (u) { return u < 0 ? NaN : Math.sqrt(u); } },
+      cubic:     { label: 'Cubic: f(x) = x³',       f: function (u) { return u * u * u; } },
+      sine:      { label: 'Sine: f(x) = sin x',          f: function (u) { return Math.sin(u); } }
+    };
+    var ORDER = ['linear', 'abs', 'quadratic', 'sqrt', 'cubic', 'sine'];
+    var RANGE = { a: { min: -4, max: 4, step: 0.25 }, h: { min: -8, max: 8, step: 0.5 }, k: { min: -8, max: 8, step: 0.5 } };
+    var MAX_CH = 12;
+    var MINUS = '−';
+
+    function $(id) { return document.getElementById(id); }
+    function has(arr, v) { for (var i = 0; i < arr.length; i++) { if (arr[i] === v) return true; } return false; }
+    function clone(o) { return JSON.parse(JSON.stringify(o)); }
+    function num(n) { return String(Math.round(Math.abs(n) * 1000) / 1000); }
+    function sgn(n) { return (n < 0 ? MINUS : '') + num(n); }
+    function onStep(v, p) { var r = RANGE[p], q = v / r.step; return Math.abs(q - Math.round(q)) < 1e-9 && v >= r.min - 1e-9 && v <= r.max + 1e-9; }
+
+    function equationHTML(parent, a, h, k) {
+      function wrap(cls, s) { return '<span class="' + cls + '">' + s + '</span>'; }
+      if (a === 0) return 'y = ' + wrap('ck', sgn(k));
+      var coef = a === 1 ? '' : (a === -1 ? wrap('ca', MINUS) : wrap('ca', sgn(a)));
+      var inner = h === 0 ? 'x' : (h > 0 ? 'x ' + MINUS + ' ' + wrap('ch2', num(h)) : 'x + ' + wrap('ch2', num(h)));
+      var body;
+      if (parent === 'linear') body = h === 0 ? coef + 'x' : coef + '(' + inner + ')';
+      else if (parent === 'quadratic') body = h === 0 ? coef + 'x²' : coef + '(' + inner + ')²';
+      else if (parent === 'cubic') body = h === 0 ? coef + 'x³' : coef + '(' + inner + ')³';
+      else if (parent === 'abs') body = coef + '|' + inner + '|';
+      else if (parent === 'sqrt') body = coef + '√' + (h === 0 ? 'x' : '(' + inner + ')');
+      else body = coef + ((a === 1 || a === -1) ? '' : ' ') + 'sin' + (h === 0 ? ' x' : '(' + inner + ')');
+      var tail = k === 0 ? '' : (k > 0 ? ' + ' + wrap('ck', num(k)) : ' ' + MINUS + ' ' + wrap('ck', num(k)));
+      return 'y = ' + body + tail;
+    }
+    function evalAt(parent, a, h, k, x) { var v = PARENTS[parent].f(x - h); return isNaN(v) ? NaN : a * v + k; }
+    function GX(x) { return (x + 10) * 20; }
+    function GY(y) { return (10 - y) * 20; }
+    function curvePath(parent, a, h, k) {
+      var d = '', pen = false, x0 = -10.5, i, x, y;
+      if (parent === 'sqrt' && h > x0) x0 = h;
+      for (i = 0; ; i++) {
+        x = x0 + i * 0.05;
+        if (x > 10.5) break;
+        y = evalAt(parent, a, h, k, x);
+        if (isNaN(y)) { pen = false; continue; }
+        if (y > 60) y = 60; if (y < -60) y = -60;
+        d += (pen ? 'L' : 'M') + GX(x).toFixed(1) + ' ' + GY(y).toFixed(1);
+        pen = true;
+      }
+      return d;
+    }
+    function curvesMatch(parent, t, s, tol) {
+      for (var i = 0; i <= 400; i++) {
+        var x = -10 + i * 0.05;
+        var yt = evalAt(parent, t.a, t.h, t.k, x), ys = evalAt(parent, s.a, s.h, s.k, x);
+        var nt = isNaN(yt), ns = isNaN(ys);
+        if (nt && ns) continue;
+        if (nt || ns) { if (Math.abs(nt ? ys : yt) <= 10) return false; continue; }
+        if (Math.min(Math.abs(yt), Math.abs(ys)) <= 10 && Math.abs(yt - ys) > tol + 1e-9) return false;
+      }
+      return true;
+    }
+    function visibleCount(ch) {
+      var n = 0;
+      for (var i = 0; i <= 400; i++) {
+        var y = evalAt(ch.parent, ch.a, ch.h, ch.k, -10 + i * 0.05);
+        if (!isNaN(y) && Math.abs(y) <= 10) n++;
+      }
+      return n;
+    }
+    var GRID = (function () {
+      var s = '', i, p;
+      for (i = -10; i <= 10; i++) {
+        if (i === 0) continue;
+        p = GX(i);
+        var o = i % 5 === 0 ? '0.22' : '0.08';
+        s += '<line x1="' + p + '" y1="0" x2="' + p + '" y2="400" stroke="rgba(150,170,255,' + o + ')" stroke-width="1.2"/>';
+        s += '<line x1="0" y1="' + p + '" x2="400" y2="' + p + '" stroke="rgba(150,170,255,' + o + ')" stroke-width="1.2"/>';
+      }
+      s += '<line x1="0" y1="200" x2="400" y2="200" stroke="rgba(220,228,255,0.65)" stroke-width="2"/>';
+      s += '<line x1="200" y1="0" x2="200" y2="400" stroke="rgba(220,228,255,0.65)" stroke-width="2"/>';
+      for (i = -5; i <= 5; i += 10) {
+        s += '<text x="' + GX(i) + '" y="220" fill="#8d9bcc" font-size="16" text-anchor="middle">' + (i < 0 ? MINUS : '') + Math.abs(i) + '</text>';
+        s += '<text x="190" y="' + (GY(i) + 6) + '" fill="#8d9bcc" font-size="16" text-anchor="end">' + (i < 0 ? MINUS : '') + Math.abs(i) + '</text>';
+      }
+      return s;
+    })();
+
+    function sanitize(raw) {
+      var d = DEFAULT_CONFIG, c = {};
+      raw = (raw && typeof raw === 'object') ? raw : {};
+      c.version = '1.0';
+      c.title = typeof raw.title === 'string' ? raw.title.slice(0, 80) : d.title;
+      c.tolerance = (typeof raw.tolerance === 'number' && raw.tolerance >= 0.01 && raw.tolerance <= 2) ? raw.tolerance : d.tolerance;
+      c.maxChecks = (typeof raw.maxChecks === 'number' && raw.maxChecks >= 0 && raw.maxChecks <= 10) ? Math.floor(raw.maxChecks) : d.maxChecks;
+      c.allowHints = typeof raw.allowHints === 'boolean' ? raw.allowHints : d.allowHints;
+      c.showEquation = typeof raw.showEquation === 'boolean' ? raw.showEquation : d.showEquation;
+      c.challenges = [];
+      var list = (raw.challenges && raw.challenges.length) ? raw.challenges : [];
+      for (var i = 0; i < list.length && c.challenges.length < MAX_CH; i++) {
+        var ch = list[i];
+        if (!ch || !PARENTS[ch.parent]) continue;
+        var un = [];
+        if (ch.unlocked && ch.unlocked.length) ['a', 'h', 'k'].forEach(function (p) { if (has(ch.unlocked, p)) un.push(p); });
+        c.challenges.push({
+          parent: ch.parent,
+          a: typeof ch.a === 'number' ? ch.a : 1,
+          h: typeof ch.h === 'number' ? ch.h : 0,
+          k: typeof ch.k === 'number' ? ch.k : 0,
+          unlocked: un.length ? un : ['a', 'h', 'k']
+        });
+      }
+      if (!raw.challenges) c.challenges = clone(d.challenges);
+      return c;
+    }
+
+    // ------------------------------------------------------------------
+    var mode = null;        // 'preview' | 'live'
+    var cfg = null;         // config being edited
+    var defaults = null;    // package default (assessment.json)
+    var hasOverride = false;
+    var dirty = false;
+
+    function setStatus(text, cls) {
+      var el = $('status');
+      el.textContent = text;
+      el.className = 'status' + (cls ? ' ' + cls : '');
+    }
+    function setPill(source) {
+      var p = $('source-pill');
+      if (mode === 'preview') { p.textContent = 'preview'; p.className = 'pill'; return; }
+      var custom = source === 'override' || source === 'content-default' || source === 'database';
+      p.textContent = custom ? 'customized' : (source === 'default' ? 'package default' : 'no config');
+      p.className = 'pill ' + (custom ? 'override' : 'default');
+    }
+    function markDirty() {
+      dirty = true;
+      setStatus('Unsaved changes.', 'warn');
+      validateAll(false);
+    }
+
+    // Validation: returns list of messages per challenge and global
+    function problems(ch) {
+      var out = [];
+      ['a', 'h', 'k'].forEach(function (p) {
+        var v = ch[p], r = RANGE[p];
+        if (typeof v !== 'number' || isNaN(v)) out.push(p + ' must be a number.');
+        else if (!onStep(v, p)) out.push(p + ' must be between ' + sgn(r.min) + ' and ' + sgn(r.max) + ' in steps of ' + r.step + ' (the student slider steps).');
+      });
+      if (ch.a === 0) out.push('a cannot be 0 (that flattens the graph to a horizontal line).');
+      if (!ch.unlocked.length) out.push('Unlock at least one slider for students to move.');
+      if (!out.length) {
+        var start = {
+          a: has(ch.unlocked, 'a') ? 1 : ch.a,
+          h: has(ch.unlocked, 'h') ? 0 : ch.h,
+          k: has(ch.unlocked, 'k') ? 0 : ch.k
+        };
+        if (curvesMatch(ch.parent, ch, start, 0.05)) out.push('The target is the same as the starting graph, so students would match it without moving anything. Change a value or unlock a different slider.');
+        else if (visibleCount(ch) < 20) out.push('Most of this target is off the grid (−10 to 10). Move it closer to the origin.');
+      }
+      return out;
+    }
+    function validateAll(showStatus) {
+      var total = 0;
+      cfg.challenges.forEach(function (ch, i) {
+        var p = problems(ch);
+        total += p.length;
+        var card = $('card-' + i);
+        if (!card) return;
+        card.classList.toggle('invalid', p.length > 0);
+        card.querySelector('.err').innerHTML = p.map(function (m) { return '&#9888; ' + m; }).join('<br>');
+      });
+      var glob = '';
+      if (!cfg.challenges.length) { glob = 'Add at least one graph.'; total++; }
+      if (showStatus && total) setStatus(glob || ('Fix the ' + total + ' problem' + (total === 1 ? '' : 's') + ' marked in red before saving.'), 'bad');
+      $('btn-save').disabled = false;
+      return total === 0;
+    }
+
+    function renderSettings() {
+      $('f-title').value = cfg.title || '';
+      var tol = $('f-tol');
+      var tv = String(cfg.tolerance);
+      var found = false;
+      for (var i = 0; i < tol.options.length; i++) if (tol.options[i].value === tv) found = true;
+      if (!found) { var o = document.createElement('option'); o.value = tv; o.textContent = 'Custom (' + tv + ')'; tol.appendChild(o); }
+      tol.value = tv;
+      $('f-checks').value = String(cfg.maxChecks);
+      $('f-hints').checked = !!cfg.allowHints;
+      $('f-eq').checked = !!cfg.showEquation;
+    }
+
+    function cardHTML(ch, i) {
+      var n = cfg.challenges.length;
+      var opts = ORDER.map(function (p) { return '<option value="' + p + '"' + (p === ch.parent ? ' selected' : '') + '>' + PARENTS[p].label + '</option>'; }).join('');
+      var rows = ['a', 'h', 'k'].map(function (p) {
+        var r = RANGE[p];
+        return '<div class="prow" data-p="' + p + '"><span class="pn">' + p + '</span>' +
+          '<button class="ibtn" type="button" data-act="dec" data-i="' + i + '" data-p="' + p + '" aria-label="Decrease ' + p + '">' + MINUS + '</button>' +
+          '<input type="number" inputmode="decimal" id="v-' + i + '-' + p + '" data-i="' + i + '" data-p="' + p + '" step="' + r.step + '" min="' + r.min + '" max="' + r.max + '" value="' + ch[p] + '" aria-label="Target ' + p + '">' +
+          '<button class="ibtn" type="button" data-act="inc" data-i="' + i + '" data-p="' + p + '" aria-label="Increase ' + p + '">+</button>' +
+          '<label class="unl"><input type="checkbox" data-act="unl" data-i="' + i + '" data-p="' + p + '"' + (has(ch.unlocked, p) ? ' checked' : '') + '> <span class="lfull">student moves ' + p + '</span><span class="lshort">unlocked</span></label></div>';
+      }).join('');
+      return '<div class="ch" id="card-' + i + '">' +
+        '<div class="ch-top"><span class="ch-num">Graph ' + (i + 1) + '</span>' +
+        '<select data-act="parent" data-i="' + i + '" aria-label="Parent function for graph ' + (i + 1) + '">' + opts + '</select><span class="sp"></span>' +
+        '<button class="ibtn" type="button" data-act="up" data-i="' + i + '" aria-label="Move up"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+        '<button class="ibtn" type="button" data-act="down" data-i="' + i + '" aria-label="Move down"' + (i === n - 1 ? ' disabled' : '') + '>&darr;</button>' +
+        '<button class="ibtn del" type="button" data-act="del" data-i="' + i + '" aria-label="Delete graph ' + (i + 1) + '">Delete</button></div>' +
+        '<div class="ch-body"><div>' +
+          '<div class="eqcap">Target equation</div><div class="eqline" id="eq-' + i + '"></div>' + rows +
+          '<div class="err"></div></div>' +
+          '<div><svg class="pv" viewBox="0 0 400 400" id="pv-' + i + '" aria-label="Preview of graph ' + (i + 1) + '"></svg>' +
+          '<div class="pvcap"><span><i></i>target</span><span><i class="s"></i>student starts here</span></div></div>' +
+        '</div></div>';
+    }
+
+    function drawPreview(i) {
+      var ch = cfg.challenges[i];
+      var svg = $('pv-' + i), eq = $('eq-' + i);
+      if (!svg) return;
+      var ok = typeof ch.a === 'number' && typeof ch.h === 'number' && typeof ch.k === 'number' && !isNaN(ch.a + ch.h + ch.k);
+      var start = { a: has(ch.unlocked, 'a') ? 1 : ch.a, h: has(ch.unlocked, 'h') ? 0 : ch.h, k: has(ch.unlocked, 'k') ? 0 : ch.k };
+      var s = GRID;
+      s += '<path d="' + curvePath(ch.parent, start.a, start.h, start.k) + '" fill="none" stroke="#2ee6ff" stroke-opacity="0.7" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round"/>';
+      if (ok) {
+        var d = curvePath(ch.parent, ch.a, ch.h, ch.k);
+        s += '<path d="' + d + '" fill="none" stroke="#ff4fa3" stroke-opacity="0.25" stroke-width="14" stroke-linecap="round"/>';
+        s += '<path d="' + d + '" fill="none" stroke="#ff4fa3" stroke-width="5" stroke-dasharray="14 9" stroke-linecap="round"/>';
+      }
+      svg.innerHTML = s;
+      eq.innerHTML = ok ? equationHTML(ch.parent, ch.a, ch.h, ch.k) : '&mdash;';
+    }
+
+    function renderList() {
+      var list = $('chlist');
+      list.innerHTML = cfg.challenges.map(cardHTML).join('');
+      cfg.challenges.forEach(function (ch, i) { drawPreview(i); });
+      $('btn-add').disabled = cfg.challenges.length >= MAX_CH;
+      $('ch-heading').textContent = 'Target graphs (' + cfg.challenges.length + ')';
+      validateAll(false);
+    }
+
+    // Two-click delete state
+    var delArmed = { i: -1, timer: null };
+    function disarmDelete() {
+      if (delArmed.timer) clearTimeout(delArmed.timer);
+      delArmed.i = -1; delArmed.timer = null;
+      var b = document.querySelector('.ibtn.del.armed');
+      if (b) { b.classList.remove('armed'); b.textContent = 'Delete'; }
+    }
+
+    function onListClick(e) {
+      var t = e.target;
+      while (t && t !== this && !t.getAttribute('data-act')) t = t.parentNode;
+      if (!t || t === this) return;
+      var act = t.getAttribute('data-act'), i = parseInt(t.getAttribute('data-i'), 10), p = t.getAttribute('data-p');
+      if (act === 'unl' || act === 'parent') return; // handled by change
+      var chs = cfg.challenges, tmp;
+      if (act === 'inc' || act === 'dec') {
+        var v = chs[i][p];
+        if (typeof v !== 'number' || isNaN(v)) v = 0;
+        var r = RANGE[p];
+        v = Math.round((v + (act === 'inc' ? r.step : -r.step)) / r.step) * r.step;
+        v = Math.max(r.min, Math.min(r.max, Math.round(v * 1000) / 1000));
+        if (p === 'a' && v === 0) v = act === 'inc' ? r.step : -r.step;
+        chs[i][p] = v;
+        $('v-' + i + '-' + p).value = v;
+        drawPreview(i);
+        markDirty();
+        return;
+      }
+      if (act === 'up' && i > 0) { tmp = chs[i - 1]; chs[i - 1] = chs[i]; chs[i] = tmp; disarmDelete(); renderList(); markDirty(); return; }
+      if (act === 'down' && i < chs.length - 1) { tmp = chs[i + 1]; chs[i + 1] = chs[i]; chs[i] = tmp; disarmDelete(); renderList(); markDirty(); return; }
+      if (act === 'del') {
+        if (delArmed.i !== i) {
+          disarmDelete();
+          delArmed.i = i;
+          t.classList.add('armed');
+          t.textContent = 'Click again to delete';
+          delArmed.timer = setTimeout(disarmDelete, 4000);
+          return;
+        }
+        disarmDelete();
+        chs.splice(i, 1);
+        renderList();
+        markDirty();
+        setStatus('Graph ' + (i + 1) + ' removed. Save to apply.', 'warn');
+      }
+    }
+    function onListChange(e) {
+      var t = e.target, act = t.getAttribute('data-act'), i = parseInt(t.getAttribute('data-i'), 10), p = t.getAttribute('data-p');
+      if (isNaN(i)) return;
+      var ch = cfg.challenges[i];
+      if (act === 'parent') { ch.parent = t.value; drawPreview(i); markDirty(); }
+      else if (act === 'unl') {
+        var un = [];
+        ['a', 'h', 'k'].forEach(function (q) {
+          var box = document.querySelector('input[data-act="unl"][data-i="' + i + '"][data-p="' + q + '"]');
+          if (box && box.checked) un.push(q);
+        });
+        ch.unlocked = un; drawPreview(i); markDirty();
+      }
+    }
+    function onListInput(e) {
+      var t = e.target;
+      if (t.type !== 'number') return;
+      var i = parseInt(t.getAttribute('data-i'), 10), p = t.getAttribute('data-p');
+      var v = parseFloat(t.value);
+      cfg.challenges[i][p] = isNaN(v) ? NaN : v;
+      drawPreview(i);
+      markDirty();
+    }
+
+    function gather() {
+      var out = {
+        version: '1.0',
+        title: $('f-title').value.replace(/^\s+|\s+$/g, '') || DEFAULT_CONFIG.title,
+        tolerance: parseFloat($('f-tol').value),
+        maxChecks: parseInt($('f-checks').value, 10),
+        allowHints: $('f-hints').checked,
+        showEquation: $('f-eq').checked,
+        challenges: cfg.challenges.map(function (ch) {
+          return { parent: ch.parent, a: ch.a, h: ch.h, k: ch.k, unlocked: ch.unlocked.slice() };
+        })
+      };
+      return out;
+    }
+
+    function handleSave() {
+      disarmDelete();
+      if (!validateAll(true)) {
+        var bad = document.querySelector('.ch.invalid');
+        if (bad && bad.scrollIntoView) bad.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      var data = gather();
+      if (mode !== 'live') {
+        setStatus('Preview: settings look good, but they are not saved in preview. Open the editor from Canvas to save.', 'warn');
+        return;
+      }
+      var btn = $('btn-save');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      setStatus('Saving…');
+      Zest.saveConfig(data).then(function (res) {
+        btn.disabled = false; btn.textContent = 'Save settings';
+        if (res && res.success) {
+          dirty = false; hasOverride = true; setPill('override');
+          setStatus('Saved. Students will get these ' + data.challenges.length + ' graphs the next time they open the activity.', 'ok');
+        } else {
+          setStatus('Save failed: ' + ((res && res.error) || 'unknown error') + '. Try again.', 'bad');
+        }
+      }, function () {
+        btn.disabled = false; btn.textContent = 'Save settings';
+        setStatus('Save failed (network). Try again.', 'bad');
+      });
+    }
+
+    var resetTimer = null;
+    function handleReset() {
+      var b = $('btn-reset');
+      if (!resetTimer) {
+        b.textContent = 'Click again to reset';
+        b.classList.add('armed');
+        setStatus('Click Reset again within 4 seconds to go back to the default five graphs.', 'warn');
+        resetTimer = setTimeout(function () { resetTimer = null; b.textContent = 'Reset to default'; b.classList.remove('armed'); }, 4000);
+        return;
+      }
+      clearTimeout(resetTimer); resetTimer = null;
+      b.textContent = 'Reset to default'; b.classList.remove('armed');
+      if (mode !== 'live') {
+        cfg = sanitize(defaults || DEFAULT_CONFIG);
+        renderSettings(); renderList(); dirty = false;
+        setStatus('Preview: back to the default graphs (nothing is saved in preview).', 'warn');
+        return;
+      }
+      b.disabled = true;
+      setStatus('Resetting…');
+      Zest.deleteConfig().then(function (res) {
+        b.disabled = false;
+        if (res && res.success) {
+          hasOverride = false;
+          cfg = sanitize(defaults || DEFAULT_CONFIG);
+          renderSettings(); renderList(); dirty = false; setPill('default');
+          setStatus('Reset. Students get the default graphs from the package.', 'ok');
+        } else {
+          setStatus('Reset failed: ' + ((res && res.error) || 'unknown error') + '.', 'bad');
+        }
+      }, function () { b.disabled = false; setStatus('Reset failed (network).', 'bad'); });
+    }
+
+    function show(config, source) {
+      cfg = sanitize(config);
+      $('loading').hidden = true;
+      $('editor').hidden = false;
+      renderSettings();
+      renderList();
+      setPill(source);
+      dirty = false;
+      $('btn-save').disabled = false;
+    }
+
+    function loadLive() {
+      setStatus('Loading…');
+      Zest.getConfig().then(function (res) {
+        if (res && res.success && res.config) {
+          hasOverride = res.source !== 'default';
+          show(res.config, res.source);
+          setStatus(hasOverride ? 'Loaded your saved settings.' : 'Showing the package defaults. Edit and save to customize.');
+        } else {
+          show(defaults || DEFAULT_CONFIG, 'default');
+          setStatus(res && res.error ? 'Could not load saved settings (' + res.error + '); showing defaults.' : 'Showing the package defaults.', res && res.error ? 'bad' : '');
+        }
+      }, function () {
+        show(defaults || DEFAULT_CONFIG, 'default');
+        setStatus('Could not load saved settings; showing defaults.', 'bad');
+      });
+    }
+
+    function startLive() {
+      if (mode === 'live') return;
+      mode = 'live';
+      $('preview-banner').classList.remove('visible');
+      try { defaults = Zest.getAssessmentConfig(); } catch (e) { defaults = null; }
+      if (!defaults) defaults = DEFAULT_CONFIG;
+      loadLive();
+    }
+    function startPreview() {
+      if (mode) return;
+      mode = 'preview';
+      $('preview-banner').classList.add('visible');
+      defaults = DEFAULT_CONFIG;
+      show(DEFAULT_CONFIG, 'default');
+      setStatus('Preview: edit freely; settings are not saved.', 'warn');
+    }
+
+    function boot() {
+      var list = $('chlist');
+      list.addEventListener('click', onListClick);
+      list.addEventListener('change', onListChange);
+      list.addEventListener('input', onListInput);
+      ['f-title', 'f-tol', 'f-checks', 'f-hints', 'f-eq'].forEach(function (id) {
+        $(id).addEventListener(id === 'f-title' ? 'input' : 'change', markDirty);
+      });
+      $('btn-add').addEventListener('click', function () {
+        if (cfg.challenges.length >= MAX_CH) return;
+        cfg.challenges.push({ parent: 'quadratic', a: -1, h: 2, k: 3, unlocked: ['a', 'h', 'k'] });
+        renderList();
+        markDirty();
+        var last = $('card-' + (cfg.challenges.length - 1));
+        if (last && last.scrollIntoView) last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      $('btn-save').addEventListener('click', handleSave);
+      $('btn-reset').addEventListener('click', handleReset);
+      $('btn-reload').addEventListener('click', function () {
+        if (mode === 'live') loadLive();
+        else { show(DEFAULT_CONFIG, 'default'); setStatus('Preview: reloaded the defaults.', 'warn'); }
+      });
+      if (window.Zest && typeof Zest.onReady === 'function') {
+        Zest.onReady(function () { startLive(); });
+        setTimeout(function () { if (!mode && !(Zest.isReady && Zest.isReady())) startPreview(); }, 1200);
+      } else {
+        startPreview();
+      }
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+    else boot();
+  })();
+  </script>
+</body>
+</html>
