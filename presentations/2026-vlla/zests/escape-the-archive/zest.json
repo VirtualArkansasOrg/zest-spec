@@ -1,0 +1,32 @@
+{
+  "zestSpec": "1.0",
+  "name": "Escape the Archive",
+  "version": "1.0.0",
+  "description": "A U.S. History digital escape room. Students are locked in an archive and open four padlocks (a year dial, a word lock, an insignia lock and a timeline lock) using clues from primary sources: the Gettysburg Address, the Preamble, the Little Rock Nine crisis of 1957 and the 19th Amendment. Auto-graded at 25 points per lock, with optional hints that cost 5 points and an optional time limit. Progress is saved; SpeedGrader shows every lock, wrong try, hint and time.",
+  "author": "Virtual Arkansas",
+  "grading": "auto",
+  "mainFile": "index.html",
+  "reviewFile": "review.html",
+  "answerKey": "answer-key.json",
+  "parameters": [
+    {
+      "key": "hints",
+      "type": "boolean",
+      "label": "Allow hints (each hint used costs 5 points)",
+      "default": true
+    },
+    {
+      "key": "timeLimit",
+      "type": "number",
+      "label": "Time limit in minutes (0 = no limit)",
+      "min": 0,
+      "max": 120,
+      "default": 0
+    }
+  ],
+  "sandbox": {
+    "allowScripts": true,
+    "allowSameOrigin": true
+  },
+  "tags": ["us-history", "escape-room", "primary-sources", "little-rock-nine", "civil-rights", "auto-graded"]
+}

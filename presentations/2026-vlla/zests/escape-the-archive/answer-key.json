@@ -1,0 +1,22 @@
+{
+  "l1": {
+    "lock": "The Year Dial",
+    "answer": "1776",
+    "why": "\"Four score and seven\" is 87 years; 1863 - 87 = 1776, the year of the Declaration of Independence."
+  },
+  "l2": {
+    "lock": "The Word Lock",
+    "answer": "WELFARE",
+    "why": "The Preamble's goals in order: form a more perfect Union, establish Justice, insure domestic Tranquility, provide for the common defence, promote the general Welfare (fifth), secure the Blessings of Liberty."
+  },
+  "l3": {
+    "lock": "The Insignia Lock",
+    "answer": "101st Airborne Division",
+    "why": "Soldiers of the 101st Airborne Division, sent under Executive Order 10730 (September 24, 1957), escorted the Little Rock Nine into Central High School on September 25, 1957. The Arkansas National Guard had been used by Governor Faubus to keep them out."
+  },
+  "l4": {
+    "lock": "The Timeline Lock",
+    "answer": "Declaration of Independence (1776), Constitution signed (1787), Gettysburg Address (1863), 19th Amendment ratified (1920), Little Rock Nine escorted into Central High (1957)",
+    "order": ["C", "E", "A", "B", "D"]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "zestSpec": "1.0",
+  "name": "Graph Match: Function Transformations",
+  "version": "1.0.0",
+  "description": "Algebra 2 transformations game: students drag a, h and k sliders (or the curve's key point) to make y = a·f(x − h) + k land on a target curve. Auto-graded: 2 points per graph matched without a hint, 1 with a hint. Teachers pick the target functions, which sliders are unlocked, the match tolerance, checks per graph and hint/equation options in the settings editor.",
+  "author": "Virtual Arkansas",
+  "grading": "auto",
+  "mainFile": "index.html",
+  "reviewFile": "review.html",
+  "editorFile": "editor.html",
+  "assessmentFile": "assessment.json",
+  "sandbox": {
+    "allowScripts": true,
+    "allowSameOrigin": true
+  },
+  "tags": ["math", "algebra 2", "functions", "transformations", "graphing", "auto-graded", "game"]
+}

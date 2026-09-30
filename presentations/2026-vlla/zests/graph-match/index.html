@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Graph Match: Function Transformations</title>
+  <script src="/public/zest-bridge.js"></script>
+  <style>
+    :root {
+      --bg: #080f24;
+      --bg2: #0f1b3d;
+      --card: #0c1631;
+      --card2: #111f45;
+      --line: rgba(150, 170, 255, 0.16);
+      --ink: #eef2ff;
+      --mute: #9aa8d6;
+      --target: #ff4fa3;
+      --student: #2ee6ff;
+      --pa: #ffd166;
+      --ph: #7cf29c;
+      --pk: #c4a5ff;
+      --ok: #3ddc84;
+      --warn: #ffb547;
+      --bad: #ff6b7a;
+      --blue: #0770A2;
+      --blue2: #1c95d8;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --math: "Cambria Math", "STIX Two Math", "Times New Roman", Georgia, serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--font);
+      color: var(--ink);
+      background: radial-gradient(1200px 700px at 15% -10%, #1a2b66 0%, rgba(26,43,102,0) 60%),
+                  radial-gradient(900px 600px at 110% 110%, #3a1450 0%, rgba(58,20,80,0) 55%),
+                  var(--bg);
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button { font-family: inherit; }
+    #app { height: 100%; display: flex; flex-direction: column; }
+
+    .banner {
+      display: none; flex: none;
+      background: linear-gradient(90deg, #3b2a00, #4a3300);
+      color: #ffe2a3; font-size: 13px; text-align: center;
+      padding: 7px 12px; border-bottom: 1px solid rgba(255, 200, 90, 0.35);
+    }
+    .banner.visible { display: block; }
+    .banner b { color: #fff; }
+
+    /* Header */
+    .top {
+      flex: none; display: flex; align-items: center; gap: 14px;
+      padding: 10px 16px; border-bottom: 1px solid var(--line);
+      background: rgba(8, 15, 36, 0.6);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+    .logo { width: 34px; height: 34px; flex: none; }
+    .title {
+      font-size: 18px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+      background: linear-gradient(90deg, #ffffff, #b9c8ff);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .sub { font-size: 12px; color: var(--mute); margin-top: 1px; }
+    .dots { display: flex; gap: 7px; flex: none; }
+    .dot {
+      width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(150,170,255,0.35);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: var(--mute); transition: all 0.3s;
+    }
+    .dot.current { border-color: var(--student); color: var(--student); box-shadow: 0 0 0 3px rgba(46,230,255,0.18); }
+    .dot.matched { background: var(--ok); border-color: var(--ok); color: #05260f; }
+    .dot.hinted { background: var(--warn); border-color: var(--warn); color: #3a2300; }
+    .dot.missed { background: rgba(255,107,122,0.2); border-color: var(--bad); color: var(--bad); }
+    .tools { display: flex; align-items: center; gap: 10px; flex: none; }
+    .sync { display: none; align-items: center; gap: 6px; font-size: 12px; color: var(--mute); }
+    .sync.visible { display: flex; }
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+    .sync-dot.dirty { background: var(--warn); }
+    .sync-dot.syncing { background: var(--blue2); animation: pulse 1s infinite; }
+    .sync-dot.error, .sync-dot.expired { background: var(--bad); }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+    .btn-ghost {
+      background: transparent; color: var(--mute); border: 1px solid var(--line);
+      border-radius: 8px; padding: 7px 12px; font-size: 13px; cursor: pointer; min-height: 36px;
+    }
+    .btn-ghost:hover { color: var(--ink); border-color: rgba(150,170,255,0.4); }
+    .btn-ghost.armed { color: var(--bad); border-color: var(--bad); background: rgba(255,107,122,0.1); }
+
+    /* Stage */
+    .stage { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; padding: 10px 12px 0; gap: 10px; }
+    body.wide .stage { flex-direction: row; align-items: stretch; padding: 14px 16px; gap: 18px; }
+    .graph-card {
+      position: relative; flex: none; border-radius: 16px;
+      background: radial-gradient(circle at 50% 40%, #14224d 0%, #0a1330 75%);
+      border: 1px solid var(--line);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.45), inset 0 0 60px rgba(46,230,255,0.05);
+      overflow: hidden;
+    }
+    .graph-card svg { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; -webkit-user-select: none; }
+    .graph-card.shake { animation: shake 0.45s; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); }
+      40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); }
+    }
+    .legend {
+      position: absolute; left: 10px; bottom: 10px; display: flex; gap: 10px;
+      font-size: 12px; font-weight: 600; pointer-events: none;
+      background: rgba(8,15,36,0.72); border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px;
+    }
+    .lg { display: flex; align-items: center; gap: 6px; }
+    .lg i { display: inline-block; width: 20px; height: 0; border-top: 3px dashed var(--target); }
+    .lg.you i { border-top: 3px solid var(--student); }
+    .match-badge {
+      position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(0.4);
+      opacity: 0; pointer-events: none; text-align: center;
+      font-size: 44px; font-weight: 900; letter-spacing: 0.04em; color: #fff;
+      text-shadow: 0 0 18px rgba(61,220,132,0.9), 0 4px 0 #0b6b3a;
+      transition: transform 0.45s cubic-bezier(.2,1.6,.4,1), opacity 0.3s;
+    }
+    .match-badge small { display: block; font-size: 26px; color: #ffe066; text-shadow: 0 0 12px rgba(255,210,80,0.8); letter-spacing: 0.2em; }
+    .match-badge.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+    /* Panel */
+    .panel {
+      width: 100%; max-width: 560px; flex: 1; min-height: 0; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 10px; padding-bottom: 14px;
+      -webkit-overflow-scrolling: touch;
+    }
+    body.wide .panel { max-width: none; padding-bottom: 0; }
+    .ch-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--student); }
+    .parent { font-size: 13px; color: var(--mute); }
+    .parent b { color: var(--ink); font-family: var(--math); font-size: 16px; font-weight: 400; }
+    .equation {
+      background: linear-gradient(180deg, var(--card2), var(--card));
+      border: 1px solid var(--line); border-radius: 14px;
+      padding: 12px 14px; text-align: center; min-height: 58px;
+      font-family: var(--math); font-size: 30px; line-height: 1.2; white-space: nowrap; overflow-x: auto;
+    }
+    .equation .ca { color: var(--pa); } .equation .ch { color: var(--ph); } .equation .ck { color: var(--pk); }
+    .equation .hid { font-family: var(--font); font-size: 15px; color: var(--mute); }
+    .eqlabel { font-family: var(--font); font-size: 11px; color: var(--mute); letter-spacing: 0.08em; text-transform: uppercase; display: block; margin-bottom: 2px; }
+
+    .sliders { display: flex; flex-direction: column; gap: 6px; }
+    .srow {
+      display: grid; grid-template-columns: 70px 40px 1fr 40px 54px; align-items: center; gap: 8px;
+      background: rgba(12,22,49,0.75); border: 1px solid var(--line); border-radius: 12px; padding: 6px 8px;
+    }
+    .pname { font-family: var(--math); font-size: 26px; font-style: italic; line-height: 1; }
+    .pdesc { display: block; font-size: 10.5px; color: var(--mute); font-family: var(--font); font-style: normal; margin-top: 2px; }
+    .srow[data-p="a"] .pname, .srow[data-p="a"] output { color: var(--pa); }
+    .srow[data-p="h"] .pname, .srow[data-p="h"] output { color: var(--ph); }
+    .srow[data-p="k"] .pname, .srow[data-p="k"] output { color: var(--pk); }
+    .srow output { font-size: 20px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+    .step {
+      width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line);
+      background: rgba(150,170,255,0.08); color: var(--ink); font-size: 22px; font-weight: 700;
+      cursor: pointer; line-height: 1;
+    }
+    .step:active { background: rgba(150,170,255,0.2); }
+    .step:disabled { opacity: 0.3; cursor: default; }
+    input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 40px; background: transparent; cursor: pointer; }
+    input[type=range]:focus { outline: none; }
+    input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: var(--track, rgba(150,170,255,0.2)); }
+    input[type=range]::-moz-range-track { height: 8px; border-radius: 4px; background: var(--track, rgba(150,170,255,0.2)); }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 30px; height: 30px; border-radius: 50%; margin-top: -11px;
+      background: var(--thumb, #fff); border: 3px solid #0a1330; box-shadow: 0 0 0 2px var(--thumb, #fff), 0 0 14px var(--thumb, #fff);
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--thumb, #fff); border: 3px solid #0a1330; box-shadow: 0 0 0 2px var(--thumb, #fff);
+    }
+    input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 5px rgba(255,255,255,0.5); }
+    .srow[data-p="a"] input { --thumb: var(--pa); }
+    .srow[data-p="h"] input { --thumb: var(--ph); }
+    .srow[data-p="k"] input { --thumb: var(--pk); }
+    .srow.locked { opacity: 0.55; }
+    .srow.locked input { cursor: default; }
+    .lockmsg { font-size: 12px; color: var(--mute); text-align: center; }
+
+    .actions { display: flex; gap: 8px; }
+    .btn {
+      flex: 1; min-height: 50px; border-radius: 12px; border: 1px solid transparent;
+      font-size: 17px; font-weight: 800; cursor: pointer; letter-spacing: 0.01em;
+      transition: transform 0.08s, filter 0.15s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.45; cursor: default; transform: none; }
+    .btn-primary { background: linear-gradient(180deg, var(--blue2), var(--blue)); color: #fff; box-shadow: 0 6px 18px rgba(7,112,162,0.45); }
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+    .btn-go { background: linear-gradient(180deg, #4be39a, #1fa463); color: #04230f; box-shadow: 0 6px 18px rgba(61,220,132,0.35); }
+    .btn-soft { flex: 0 0 auto; padding: 0 16px; background: rgba(255,181,71,0.1); color: var(--warn); border-color: rgba(255,181,71,0.45); font-size: 15px; }
+    .btn-soft small { display: block; font-size: 10.5px; font-weight: 600; opacity: 0.85; }
+    [hidden] { display: none !important; }
+
+    .feedback {
+      border-radius: 12px; padding: 10px 12px; font-size: 15px; line-height: 1.4;
+      background: rgba(150,170,255,0.07); border: 1px solid var(--line); color: var(--ink); min-height: 44px;
+    }
+    .feedback.ok { background: rgba(61,220,132,0.12); border-color: rgba(61,220,132,0.5); }
+    .feedback.bad { background: rgba(255,107,122,0.1); border-color: rgba(255,107,122,0.45); }
+    .feedback.hint { background: rgba(255,181,71,0.1); border-color: rgba(255,181,71,0.45); }
+    .feedback .m { font-family: var(--math); font-size: 18px; white-space: nowrap; }
+    .rules { font-size: 12px; color: var(--mute); text-align: center; }
+    .rules b { color: var(--ink); }
+
+    /* Overlays */
+    .overlay {
+      position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center;
+      background: rgba(4, 8, 22, 0.78); padding: 16px;
+      -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    }
+    .overlay.visible { display: flex; }
+    .sheet {
+      width: 100%; max-width: 560px; max-height: 100%; overflow-y: auto;
+      background: linear-gradient(180deg, #13214a, #0c1631); border: 1px solid rgba(150,170,255,0.25);
+      border-radius: 20px; padding: 22px; box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+    }
+    .sheet h2 { font-size: 26px; font-weight: 900; letter-spacing: -0.01em; margin-bottom: 6px; }
+    .sheet p { color: #c9d3f5; font-size: 15px; line-height: 1.5; }
+    .formula { font-family: var(--math); font-size: 34px; text-align: center; margin: 14px 0 10px; }
+    .formula .ca { color: var(--pa); } .formula .ch { color: var(--ph); } .formula .ck { color: var(--pk); }
+    .how { list-style: none; display: grid; gap: 6px; margin: 8px 0 14px; }
+    .how li { font-size: 15px; color: #c9d3f5; display: flex; gap: 10px; align-items: baseline; }
+    .how li b { font-family: var(--math); font-style: italic; font-size: 20px; width: 18px; }
+    .scorebox { background: rgba(7,112,162,0.18); border: 1px solid rgba(28,149,216,0.45); border-radius: 12px; padding: 10px 12px; font-size: 14px; color: #d6e6ff; margin-bottom: 16px; line-height: 1.45; }
+    .big-score { text-align: center; margin: 6px 0 12px; }
+    .big-score .num { font-size: 52px; font-weight: 900; line-height: 1; background: linear-gradient(90deg, #7cf29c, #2ee6ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .big-score .of { font-size: 15px; color: var(--mute); margin-top: 4px; }
+    .rlist { display: grid; gap: 8px; margin-bottom: 14px; }
+    .ritem { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center; background: rgba(12,22,49,0.8); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+    .ritem svg { width: 64px; height: 64px; border-radius: 8px; background: #0a1330; }
+    .ritem .req { font-family: var(--math); font-size: 18px; }
+    .ritem .rsub { font-size: 12px; color: var(--mute); margin-top: 2px; }
+    .pts { font-weight: 900; font-size: 15px; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+    .pts.p2 { background: rgba(61,220,132,0.18); color: var(--ok); }
+    .pts.p1 { background: rgba(255,181,71,0.18); color: var(--warn); }
+    .pts.p0 { background: rgba(255,107,122,0.15); color: var(--bad); }
+    .submit-msg { font-size: 14px; margin-top: 10px; text-align: center; line-height: 1.45; min-height: 20px; }
+    .submit-msg.ok { color: var(--ok); } .submit-msg.bad { color: var(--bad); } .submit-msg.warn { color: var(--warn); }
+    .toast {
+      position: fixed; left: 50%; bottom: 18px; transform: translate(-50%, 30px); opacity: 0; z-index: 30;
+      background: #12306a; color: #e6efff; border: 1px solid rgba(28,149,216,0.6); border-radius: 10px;
+      padding: 10px 16px; font-size: 14px; transition: all 0.3s; pointer-events: none;
+    }
+    .toast.visible { opacity: 1; transform: translate(-50%, 0); }
+    .loading .panel { opacity: 0.5; pointer-events: none; }
+
+    @media (max-width: 480px) {
+      .top { padding: 8px 12px; gap: 8px; }
+      .title { font-size: 16px; }
+      .logo { width: 30px; height: 30px; }
+      .dots { gap: 4px; }
+      .dot { width: 18px; height: 18px; font-size: 10px; }
+      .tools .btn-ghost { padding: 6px 8px; font-size: 12px; min-height: 32px; }
+      .title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 15px; line-height: 1.15; }
+      .sub, .lockmsg, .rules, .eqlabel { display: none !important; }
+      .stage { gap: 8px; padding-top: 8px; }
+      .panel { gap: 7px; }
+      .legend { font-size: 11px; padding: 4px 7px; left: 8px; bottom: 8px; }
+      .feedback { font-size: 14px; padding: 8px 10px; }
+      .btn { min-height: 48px; }
+      .equation { font-size: 26px; padding: 8px 10px; min-height: 50px; }
+      .srow { grid-template-columns: 56px 38px 1fr 38px 46px; gap: 6px; padding: 4px 6px; }
+      .step { width: 38px; height: 38px; }
+      .srow output { font-size: 18px; }
+      .sheet { padding: 18px; }
+      .sheet h2 { font-size: 22px; }
+      .formula { font-size: 28px; }
+    }
+    @media (max-width: 370px) { .sync { display: none !important; } }
+  </style>
+</head>
+<body class="loading">
+  <div id="app">
+    <div class="banner" id="preview-banner"><b>Preview:</b> try it out. Nothing is saved or submitted.</div>
+    <header class="top">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 34 34" aria-hidden="true">
+          <rect x="1" y="1" width="32" height="32" rx="9" fill="#101d45" stroke="rgba(150,170,255,0.35)"/>
+          <path d="M6 26 C 12 4, 15 4, 18 17 S 25 30, 29 8" fill="none" stroke="#ff4fa3" stroke-width="2.4" stroke-dasharray="3 2.4" stroke-linecap="round"/>
+          <path d="M6 24 C 12 6, 15 6, 18 18 S 25 28, 29 10" fill="none" stroke="#2ee6ff" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+        <div style="min-width:0">
+          <div class="title" id="title">Graph Match</div>
+          <div class="sub" id="sub">Function transformations</div>
+        </div>
+      </div>
+      <div class="dots" id="dots" aria-label="Progress"></div>
+      <div class="tools">
+        <span class="sync" id="sync"><span class="sync-dot" id="sync-dot"></span><span id="sync-text">Saved</span></span>
+        <button class="btn-ghost" id="btn-restart" type="button" aria-label="Start over">Start over</button>
+      </div>
+    </header>
+
+    <main class="stage" id="stage">
+      <section class="graph-card" id="graph-card">
+        <svg id="graph" viewBox="0 0 400 400" role="img" aria-label="Coordinate grid with the target curve and your curve">
+          <defs>
+            <clipPath id="clip"><rect x="0" y="0" width="400" height="400"/></clipPath>
+            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3.2" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <g id="grid"></g>
+          <g clip-path="url(#clip)">
+            <path id="target-halo" fill="none" stroke="#ff4fa3" stroke-opacity="0.22" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+            <path id="target" fill="none" stroke="#ff4fa3" stroke-width="4.5" stroke-dasharray="11 8" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+            <path id="you-halo" fill="none" stroke="#2ee6ff" stroke-opacity="0.18" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+            <path id="you" fill="none" stroke="#2ee6ff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <g id="hint-mark"></g>
+            <g id="handle" style="cursor: grab">
+              <circle id="handle-hit" r="24" fill="transparent"/>
+              <circle id="handle-ring" r="11" fill="rgba(46,230,255,0.18)" stroke="#2ee6ff" stroke-width="2"/>
+              <circle id="handle-dot" r="4.5" fill="#fff"/>
+            </g>
+            <g id="fx"></g>
+          </g>
+        </svg>
+        <div class="legend"><span class="lg"><i></i>Target</span><span class="lg you"><i></i>Your graph</span></div>
+        <div class="match-badge" id="match-badge">MATCH!<small id="match-stars"></small></div>
+      </section>
+
+      <section class="panel" id="panel">
+        <div class="ch-head">
+          <div class="kicker" id="kicker">Challenge 1</div>
+          <div class="parent">Parent: <b id="parent-eq">f(x) = x²</b></div>
+        </div>
+        <div class="equation" id="equation" aria-live="polite"></div>
+        <div class="sliders" id="sliders"></div>
+        <div class="lockmsg" id="lockmsg" hidden></div>
+        <div class="actions">
+          <button class="btn btn-soft" id="btn-hint" type="button">Hint<small>match = 1 pt</small></button>
+          <button class="btn btn-primary" id="btn-check" type="button">Check</button>
+          <button class="btn btn-go" id="btn-next" type="button" hidden>Next graph &rarr;</button>
+        </div>
+        <div class="feedback" id="feedback" aria-live="polite"></div>
+        <div class="rules" id="rules"></div>
+      </section>
+    </main>
+
+    <div class="overlay" id="intro" role="dialog" aria-labelledby="intro-h">
+      <div class="sheet">
+        <h2 id="intro-h">Match the graph</h2>
+        <p>Transform the parent function until your <b style="color:#2ee6ff">blue curve</b> lands exactly on the <b style="color:#ff4fa3">pink dashed target</b>.</p>
+        <div class="formula">y = <span class="ca">a</span>&thinsp;f(x &minus; <span class="ch">h</span>) + <span class="ck">k</span></div>
+        <ul class="how">
+          <li><b style="color:#ffd166">a</b><span>stretches or shrinks the graph; a negative <i>a</i> flips it</span></li>
+          <li><b style="color:#7cf29c">h</b><span>slides it right (h &gt; 0) or left (h &lt; 0)</span></li>
+          <li><b style="color:#c4a5ff">k</b><span>slides it up (k &gt; 0) or down (k &lt; 0)</span></li>
+        </ul>
+        <div class="scorebox" id="intro-score"></div>
+        <button class="btn btn-primary" id="btn-start" type="button" style="width:100%">Start</button>
+      </div>
+    </div>
+
+    <div class="overlay" id="results" role="dialog" aria-labelledby="results-h">
+      <div class="sheet">
+        <h2 id="results-h">Results</h2>
+        <div class="big-score"><div class="num" id="res-num">0 / 0</div><div class="of" id="res-of">points</div></div>
+        <div class="rlist" id="res-list"></div>
+        <div class="scorebox" id="res-rules"></div>
+        <button class="btn btn-primary" id="btn-submit" type="button" style="width:100%">Submit my score</button>
+        <div class="submit-msg" id="submit-msg" aria-live="polite"></div>
+      </div>
+    </div>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    // ------------------------------------------------------------------
+    // Defaults (same as assessment.json; used in preview or if no config)
+    // ------------------------------------------------------------------
+    var DEFAULT_CONFIG = {
+      version: '1.0',
+      title: 'Graph Match: Transformations',
+      tolerance: 0.1,
+      maxChecks: 3,
+      allowHints: true,
+      showEquation: true,
+      challenges: [
+        { parent: 'quadratic', a: 1, h: 3, k: -2, unlocked: ['h', 'k'] },
+        { parent: 'abs', a: 2, h: -1, k: -3, unlocked: ['a', 'h', 'k'] },
+        { parent: 'sqrt', a: -2, h: -4, k: 3, unlocked: ['a', 'h', 'k'] },
+        { parent: 'cubic', a: 0.5, h: 1, k: -2, unlocked: ['a', 'h', 'k'] },
+        { parent: 'sine', a: -2, h: 1, k: 1, unlocked: ['a', 'h', 'k'] }
+      ]
+    };
+
+    var PARENTS = {
+      linear:    { label: 'Linear',         eq: 'f(x) = x',     key: 'y-intercept',    f: function (u) { return u; } },
+      abs:       { label: 'Absolute value', eq: 'f(x) = |x|',   key: 'vertex',         f: function (u) { return Math.abs(u); } },
+      quadratic: { label: 'Quadratic',      eq: 'f(x) = x²', key: 'vertex',       f: function (u) { return u * u; } },
+      sqrt:      { label: 'Square root',    eq: 'f(x) = √x', key: 'starting point', f: function (u) { return u < 0 ? NaN : Math.sqrt(u); } },
+      cubic:     { label: 'Cubic',          eq: 'f(x) = x³', key: 'center point', f: function (u) { return u * u * u; } },
+      sine:      { label: 'Sine',           eq: 'f(x) = sin x', key: 'midline point',  f: function (u) { return Math.sin(u); } }
+    };
+    var RANGE = { a: { min: -4, max: 4, step: 0.25 }, h: { min: -8, max: 8, step: 0.5 }, k: { min: -8, max: 8, step: 0.5 } };
+    var START = { a: 1, h: 0, k: 0 };
+    var PDESC = { a: 'stretch / flip', h: 'left / right', k: 'down / up' };
+    var MINUS = '−';
+
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
+    function $(id) { return document.getElementById(id); }
+    function esc(s) { var d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+    function num(n) { return String(Math.round(Math.abs(n) * 1000) / 1000); }
+    function sgn(n) { return (n < 0 ? MINUS : '') + num(n); }
+    function snap(v, p) {
+      var r = RANGE[p];
+      var s = Math.round(v / r.step) * r.step;
+      if (s < r.min) s = r.min;
+      if (s > r.max) s = r.max;
+      return Math.round(s * 1000) / 1000;
+    }
+    function has(arr, v) { for (var i = 0; i < arr.length; i++) { if (arr[i] === v) return true; } return false; }
+    function clone(o) { return JSON.parse(JSON.stringify(o)); }
+    function pt(x, y) { return '(' + sgn(x) + ', ' + sgn(y) + ')'; }
+
+    // Equation parts for y = a f(x - h) + k, as HTML with coloured a/h/k.
+    function equationHTML(parent, a, h, k, plain) {
+      function wrap(cls, s) { return plain ? s : '<span class="' + cls + '">' + s + '</span>'; }
+      if (a === 0) return 'y = ' + wrap('ck', sgn(k));
+      var coef = a === 1 ? '' : (a === -1 ? wrap('ca', MINUS) : wrap('ca', sgn(a)));
+      var inner = h === 0 ? 'x' : (h > 0 ? 'x ' + MINUS + ' ' + wrap('ch', num(h)) : 'x + ' + wrap('ch', num(h)));
+      var body;
+      if (parent === 'linear') body = h === 0 ? coef + 'x' : coef + '(' + inner + ')';
+      else if (parent === 'quadratic') body = h === 0 ? coef + 'x²' : coef + '(' + inner + ')²';
+      else if (parent === 'cubic') body = h === 0 ? coef + 'x³' : coef + '(' + inner + ')³';
+      else if (parent === 'abs') body = coef + '|' + inner + '|';
+      else if (parent === 'sqrt') body = coef + '√' + (h === 0 ? 'x' : '(' + inner + ')');
+      else body = coef + ((a === 1 || a === -1) ? '' : ' ') + 'sin' + (h === 0 ? ' x' : '(' + inner + ')');
+      var tail = k === 0 ? '' : (k > 0 ? ' + ' + wrap('ck', num(k)) : ' ' + MINUS + ' ' + wrap('ck', num(k)));
+      return 'y = ' + body + tail;
+    }
+
+    function evalAt(parent, a, h, k, x) {
+      var v = PARENTS[parent].f(x - h);
+      return isNaN(v) ? NaN : a * v + k;
+    }
+    function GX(x) { return (x + 10) * 20; }
+    function GY(y) { return (10 - y) * 20; }
+
+    function curvePath(parent, a, h, k) {
+      var d = '', pen = false, x0 = -10.5, i, x, y;
+      if (parent === 'sqrt' && h > x0) x0 = h;
+      for (i = 0; ; i++) {
+        x = x0 + i * 0.025;
+        if (x > 10.5) break;
+        y = evalAt(parent, a, h, k, x);
+        if (isNaN(y)) { pen = false; continue; }
+        if (y > 60) y = 60; if (y < -60) y = -60;
+        d += (pen ? 'L' : 'M') + GX(x).toFixed(2) + ' ' + GY(y).toFixed(2);
+        pen = true;
+      }
+      return d;
+    }
+
+    // The curves match when they agree (within tol grid units) everywhere
+    // either one is on screen, including where each one is defined.
+    function curvesMatch(parent, t, s, tol) {
+      var lim = tol + 1e-9;
+      for (var i = 0; i <= 400; i++) {
+        var x = -10 + i * 0.05;
+        var yt = evalAt(parent, t.a, t.h, t.k, x);
+        var ys = evalAt(parent, s.a, s.h, s.k, x);
+        var nt = isNaN(yt), ns = isNaN(ys);
+        if (nt && ns) continue;
+        if (nt || ns) {
+          if (Math.abs(nt ? ys : yt) <= 10) return false;
+          continue;
+        }
+        if (Math.min(Math.abs(yt), Math.abs(ys)) <= 10 && Math.abs(yt - ys) > lim) return false;
+      }
+      return true;
+    }
+
+    function gridSVG() {
+      var s = '', i, p;
+      for (i = -10; i <= 10; i++) {
+        if (i === 0) continue;
+        p = GX(i);
+        s += '<line x1="' + p + '" y1="0" x2="' + p + '" y2="400" stroke="rgba(150,170,255,' + (i % 5 === 0 ? '0.22' : '0.09') + ')" stroke-width="1"/>';
+        s += '<line x1="0" y1="' + p + '" x2="400" y2="' + p + '" stroke="rgba(150,170,255,' + (i % 5 === 0 ? '0.22' : '0.09') + ')" stroke-width="1"/>';
+      }
+      s += '<line x1="0" y1="200" x2="400" y2="200" stroke="rgba(220,228,255,0.7)" stroke-width="1.6"/>';
+      s += '<line x1="200" y1="0" x2="200" y2="400" stroke="rgba(220,228,255,0.7)" stroke-width="1.6"/>';
+      s += '<path d="M392 195 L400 200 L392 205 M195 8 L200 0 L205 8" fill="none" stroke="rgba(220,228,255,0.7)" stroke-width="1.6"/>';
+      for (i = -8; i <= 8; i += 2) {
+        if (i === 0) continue;
+        var lab = (i < 0 ? MINUS : '') + Math.abs(i);
+        s += '<text x="' + GX(i) + '" y="216" fill="#8d9bcc" font-size="12" text-anchor="middle" font-family="-apple-system,Segoe UI,Roboto,sans-serif">' + lab + '</text>';
+        s += '<text x="193" y="' + (GY(i) + 4) + '" fill="#8d9bcc" font-size="12" text-anchor="end" font-family="-apple-system,Segoe UI,Roboto,sans-serif">' + lab + '</text>';
+      }
+      s += '<text x="392" y="190" fill="#c7d2fe" font-size="14" font-style="italic" text-anchor="end" font-family="Cambria Math,Times New Roman,serif">x</text>';
+      s += '<text x="210" y="14" fill="#c7d2fe" font-size="14" font-style="italic" font-family="Cambria Math,Times New Roman,serif">y</text>';
+      return s;
+    }
+
+    function sanitizeConfig(raw) {
+      var d = DEFAULT_CONFIG, c = {};
+      raw = (raw && typeof raw === 'object') ? raw : {};
+      c.version = '1.0';
+      c.title = (typeof raw.title === 'string' && raw.title.replace(/\s/g, '')) ? raw.title.slice(0, 80) : d.title;
+      c.tolerance = (typeof raw.tolerance === 'number' && raw.tolerance >= 0.01 && raw.tolerance <= 2) ? raw.tolerance : d.tolerance;
+      c.maxChecks = (typeof raw.maxChecks === 'number' && raw.maxChecks >= 0 && raw.maxChecks <= 10) ? Math.floor(raw.maxChecks) : d.maxChecks;
+      c.allowHints = typeof raw.allowHints === 'boolean' ? raw.allowHints : d.allowHints;
+      c.showEquation = typeof raw.showEquation === 'boolean' ? raw.showEquation : d.showEquation;
+      c.challenges = [];
+      var list = (raw.challenges && raw.challenges.length) ? raw.challenges : [];
+      for (var i = 0; i < list.length && c.challenges.length < 20; i++) {
+        var ch = list[i];
+        if (!ch || !PARENTS[ch.parent]) continue;
+        if (typeof ch.a !== 'number' || typeof ch.h !== 'number' || typeof ch.k !== 'number') continue;
+        var un = [];
+        if (ch.unlocked && ch.unlocked.length) {
+          ['a', 'h', 'k'].forEach(function (p) { if (has(ch.unlocked, p)) un.push(p); });
+        }
+        if (!un.length) un = ['a', 'h', 'k'];
+        c.challenges.push({ parent: ch.parent, a: snap(ch.a, 'a'), h: snap(ch.h, 'h'), k: snap(ch.k, 'k'), unlocked: un });
+      }
+      if (!c.challenges.length) c.challenges = clone(d.challenges);
+      return c;
+    }
+    function configSig(c) {
+      return c.challenges.map(function (ch) { return ch.parent + ':' + ch.a + ',' + ch.h + ',' + ch.k + ':' + ch.unlocked.join(''); }).join('|');
+    }
+
+    // ------------------------------------------------------------------
+    // State
+    // ------------------------------------------------------------------
+    var mode = null;          // 'preview' | 'live'
+    var CFG = null;
+    var S = null;             // saved state
+    var allowRetry = true;
+    var syncHooked = false;
+    var saveTimer = null;
+    var busy = false;         // match animation running
+
+    function freshItem(ch) {
+      return {
+        a: has(ch.unlocked, 'a') ? START.a : ch.a,
+        h: has(ch.unlocked, 'h') ? START.h : ch.h,
+        k: has(ch.unlocked, 'k') ? START.k : ch.k,
+        checks: 0, hint: false, status: 'open', points: 0
+      };
+    }
+    function freshState() {
+      return {
+        v: 1, sig: configSig(CFG), phase: 'intro', idx: 0,
+        items: CFG.challenges.map(freshItem), submitted: false, submitNote: ''
+      };
+    }
+    function validState(st) {
+      if (!st || st.v !== 1 || st.sig !== configSig(CFG)) return false;
+      if (!st.items || st.items.length !== CFG.challenges.length) return false;
+      if (typeof st.idx !== 'number' || st.idx < 0 || st.idx >= CFG.challenges.length) return false;
+      return true;
+    }
+    function save(immediate) {
+      if (mode !== 'live') return;
+      if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+      function go() { try { Zest.saveState(clone(S)); } catch (e) { /* ignore */ } }
+      if (immediate) go(); else saveTimer = setTimeout(go, 400);
+    }
+
+    function cur() { return CFG.challenges[S.idx]; }
+    function item() { return S.items[S.idx]; }
+    function totals() {
+      var p = 0;
+      S.items.forEach(function (it) { p += it.points || 0; });
+      return { points: p, max: CFG.challenges.length * 2 };
+    }
+
+    // ------------------------------------------------------------------
+    // Rendering
+    // ------------------------------------------------------------------
+    var els = {};
+    function cacheEls() {
+      ['preview-banner', 'title', 'sub', 'dots', 'sync', 'sync-dot', 'sync-text', 'btn-restart', 'stage', 'graph-card',
+       'graph', 'grid', 'target', 'target-halo', 'you', 'you-halo', 'hint-mark', 'handle', 'fx', 'match-badge', 'match-stars',
+       'panel', 'kicker', 'parent-eq', 'equation', 'sliders', 'lockmsg', 'btn-hint', 'btn-check', 'btn-next', 'feedback',
+       'rules', 'intro', 'intro-score', 'btn-start', 'results', 'res-num', 'res-of', 'res-list', 'res-rules', 'btn-submit',
+       'submit-msg', 'toast'].forEach(function (id) { els[id] = $(id); });
+    }
+
+    function rulesText(long) {
+      var t;
+      if (CFG.allowHints) {
+        t = long
+          ? '<b>Scoring:</b> each graph is worth 2 points. Match it without a hint for <b>2 points</b>, or with a hint for <b>1 point</b>. '
+          : '<b>2 pts</b> without a hint &middot; <b>1 pt</b> with a hint';
+      } else {
+        t = long ? '<b>Scoring:</b> each graph you match is worth <b>2 points</b>. ' : '<b>2 pts</b> per match';
+      }
+      if (CFG.maxChecks > 0) {
+        t += long
+          ? 'You get <b>' + CFG.maxChecks + ' check' + (CFG.maxChecks === 1 ? '' : 's') + '</b> per graph; if you run out, that graph scores 0 and you see the answer.'
+          : ' &middot; ' + CFG.maxChecks + ' check' + (CFG.maxChecks === 1 ? '' : 's') + ' per graph';
+      } else if (long) {
+        t += 'You can check as many times as you like.';
+      }
+      return t;
+    }
+
+    function renderDots() {
+      var h = '';
+      for (var i = 0; i < CFG.challenges.length; i++) {
+        var it = S.items[i], cls = 'dot', label = String(i + 1);
+        if (it.status === 'matched') { cls += it.hint ? ' hinted' : ' matched'; label = '✓'; }
+        else if (it.status === 'missed') { cls += ' missed'; label = '×'; }
+        if (i === S.idx && S.phase === 'play') cls += ' current';
+        h += '<span class="' + cls + '" title="Graph ' + (i + 1) + '">' + label + '</span>';
+      }
+      els.dots.innerHTML = h;
+    }
+
+    function buildSliders() {
+      var ch = cur(), h = '';
+      ['a', 'h', 'k'].forEach(function (p) {
+        var r = RANGE[p], locked = !has(ch.unlocked, p);
+        h += '<div class="srow' + (locked ? ' locked' : '') + '" data-p="' + p + '">' +
+          '<div class="pname">' + p + '<span class="pdesc">' + (locked ? '🔒 locked' : PDESC[p]) + '</span></div>' +
+          '<button class="step" type="button" data-p="' + p + '" data-d="-1" aria-label="Decrease ' + p + '"' + (locked ? ' disabled' : '') + '>' + MINUS + '</button>' +
+          '<input type="range" id="r-' + p + '" min="' + r.min + '" max="' + r.max + '" step="' + r.step + '" aria-label="' + p + '"' + (locked ? ' disabled' : '') + '>' +
+          '<button class="step" type="button" data-p="' + p + '" data-d="1" aria-label="Increase ' + p + '"' + (locked ? ' disabled' : '') + '>+</button>' +
+          '<output id="o-' + p + '"></output></div>';
+      });
+      els.sliders.innerHTML = h;
+      ['a', 'h', 'k'].forEach(function (p) {
+        var input = $('r-' + p);
+        input.addEventListener('input', function () { setParam(p, parseFloat(input.value)); });
+      });
+      var btns = els.sliders.querySelectorAll('.step');
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].addEventListener('click', function (e) {
+          var b = e.currentTarget, p = b.getAttribute('data-p');
+          setParam(p, item()[p] + parseInt(b.getAttribute('data-d'), 10) * RANGE[p].step);
+        });
+      }
+      var locked = ['a', 'h', 'k'].filter(function (p) { return !has(ch.unlocked, p); });
+      els.lockmsg.hidden = !locked.length;
+      if (locked.length) els.lockmsg.textContent = 'Locked slider' + (locked.length > 1 ? 's are' : ' is') + ' already set to the target value.';
+    }
+
+    function syncSliders() {
+      var it = item(), open = it.status === 'open';
+      ['a', 'h', 'k'].forEach(function (p) {
+        var input = $('r-' + p), r = RANGE[p];
+        input.value = it[p];
+        var pct = ((it[p] - r.min) / (r.max - r.min)) * 100;
+        var col = p === 'a' ? '#ffd166' : (p === 'h' ? '#7cf29c' : '#c4a5ff');
+        var zero = ((0 - r.min) / (r.max - r.min)) * 100;
+        var lo = Math.min(pct, zero), hi = Math.max(pct, zero);
+        input.style.setProperty('--track', 'linear-gradient(90deg, rgba(150,170,255,0.2) ' + lo + '%, ' + col + ' ' + lo + '%, ' + col + ' ' + hi + '%, rgba(150,170,255,0.2) ' + hi + '%)');
+        $('o-' + p).textContent = sgn(it[p]);
+        var locked = !has(cur().unlocked, p);
+        input.disabled = locked || !open;
+        var btns = els.sliders.querySelectorAll('.step[data-p="' + p + '"]');
+        for (var i = 0; i < btns.length; i++) btns[i].disabled = locked || !open;
+      });
+    }
+
+    function renderEquation() {
+      var ch = cur(), it = item();
+      var show = CFG.showEquation || it.status !== 'open';
+      if (show) {
+        els.equation.innerHTML = '<span class="eqlabel">Your graph</span>' + equationHTML(ch.parent, it.a, it.h, it.k);
+      } else {
+        els.equation.innerHTML = '<span class="eqlabel">Your graph</span><span class="hid">Equation hidden for this activity: match it by eye, then check.</span>';
+      }
+    }
+
+    function keyPoint(ch, t) {
+      if (ch.parent === 'linear') return { x: 0, y: t.k - t.a * t.h };
+      return { x: t.h, y: t.k };
+    }
+
+    function renderGraph() {
+      var ch = cur(), it = item();
+      var td = curvePath(ch.parent, ch.a, ch.h, ch.k);
+      els.target.setAttribute('d', td);
+      els['target-halo'].setAttribute('d', td);
+      var yd = curvePath(ch.parent, it.a, it.h, it.k);
+      els.you.setAttribute('d', yd);
+      els['you-halo'].setAttribute('d', yd);
+      // drag handle on the student's key point (h, k)
+      var canDrag = it.status === 'open' && (has(ch.unlocked, 'h') || has(ch.unlocked, 'k'));
+      els.handle.style.display = canDrag ? '' : 'none';
+      els.handle.setAttribute('transform', 'translate(' + GX(it.h) + ',' + GY(it.k) + ')');
+      // hint marker
+      var hm = '';
+      if (it.hint && it.status === 'open') {
+        var kp = keyPoint(ch, ch);
+        if (Math.abs(kp.x) <= 10 && Math.abs(kp.y) <= 10) {
+          hm = '<circle cx="' + GX(kp.x) + '" cy="' + GY(kp.y) + '" r="9" fill="none" stroke="#ffb547" stroke-width="2.5"><animate attributeName="r" values="7;15;7" dur="1.6s" repeatCount="indefinite"/><animate attributeName="stroke-opacity" values="1;0.3;1" dur="1.6s" repeatCount="indefinite"/></circle>' +
+               '<circle cx="' + GX(kp.x) + '" cy="' + GY(kp.y) + '" r="4" fill="#ffb547"/>';
+        }
+      }
+      els['hint-mark'].innerHTML = hm;
+      var matched = it.status === 'matched';
+      els.target.setAttribute('stroke', matched ? '#3ddc84' : '#ff4fa3');
+      els['target-halo'].setAttribute('stroke', matched ? '#3ddc84' : '#ff4fa3');
+    }
+
+    function hintText(ch) {
+      var kp = keyPoint(ch, ch);
+      var s;
+      if (ch.parent === 'linear') s = 'The target line crosses the y-axis at <span class="m">' + pt(kp.x, kp.y) + '</span>.';
+      else if (ch.parent === 'sqrt') s = 'The target starts at <span class="m">' + pt(kp.x, kp.y) + '</span>.';
+      else if (ch.parent === 'cubic') s = 'The target’s center (point of symmetry) is at <span class="m">' + pt(kp.x, kp.y) + '</span>.';
+      else if (ch.parent === 'sine') s = 'The target’s midline is <span class="m">y = ' + sgn(ch.k) + '</span>; it crosses the midline at <span class="m">' + pt(kp.x, kp.y) + '</span>.';
+      else s = 'The target’s vertex is at <span class="m">' + pt(kp.x, kp.y) + '</span>.';
+      return '<b>Hint:</b> ' + s + ' Remember, <span class="m">x ' + MINUS + ' h</span> moves the graph <b>right</b> when h is positive.';
+    }
+
+    function renderStatus() {
+      var ch = cur(), it = item(), fb = els.feedback;
+      var open = it.status === 'open';
+      els['btn-check'].hidden = !open;
+      els['btn-next'].hidden = open;
+      els['btn-next'].innerHTML = S.idx === CFG.challenges.length - 1 ? 'See results &rarr;' : 'Next graph &rarr;';
+      els['btn-hint'].hidden = !(CFG.allowHints && open && !it.hint);
+      if (it.status === 'matched') {
+        fb.className = 'feedback ok';
+        fb.innerHTML = '<b>Matched!</b> ' + (it.hint ? '1 point (hint used). ' : '2 points. ') +
+          'Target: <span class="m">' + equationHTML(ch.parent, ch.a, ch.h, ch.k, true) + '</span>';
+      } else if (it.status === 'missed') {
+        fb.className = 'feedback bad';
+        fb.innerHTML = '<b>Out of checks.</b> The target was <span class="m">' + equationHTML(ch.parent, ch.a, ch.h, ch.k, true) + '</span>';
+      } else if (it.lastMsg) {
+        fb.className = 'feedback bad';
+        fb.innerHTML = it.lastMsg + (it.hint ? '<br>' + hintText(ch) : '');
+      } else if (it.hint) {
+        fb.className = 'feedback hint';
+        fb.innerHTML = hintText(ch);
+      } else {
+        fb.className = 'feedback';
+        var un = ch.unlocked.map(function (p) { return '<b>' + p + '</b>'; }).join(', ');
+        fb.innerHTML = 'Move ' + un + ' (or drag the glowing dot) until your curve covers the target, then press <b>Check</b>.';
+      }
+      var left = CFG.maxChecks > 0 ? Math.max(0, CFG.maxChecks - it.checks) : -1;
+      els.rules.innerHTML = rulesText(false);
+      els['btn-check'].innerHTML = 'Check' + (left >= 0 ? '<span style="font-weight:600;opacity:.8;font-size:13px"> &middot; ' + left + ' left</span>' : '');
+    }
+
+    function renderChallenge() {
+      var ch = cur();
+      els.kicker.textContent = 'Graph ' + (S.idx + 1) + ' of ' + CFG.challenges.length + ' · ' + PARENTS[ch.parent].label;
+      els['parent-eq'].textContent = PARENTS[ch.parent].eq;
+      els.sub.textContent = 'Graph ' + (S.idx + 1) + ' of ' + CFG.challenges.length;
+      buildSliders();
+      renderAll();
+    }
+    function renderAll() {
+      syncSliders();
+      renderEquation();
+      renderGraph();
+      renderStatus();
+      renderDots();
+    }
+
+    // ------------------------------------------------------------------
+    // Interaction
+    // ------------------------------------------------------------------
+    function setParam(p, v) {
+      var it = item();
+      if (it.status !== 'open' || !has(cur().unlocked, p)) return;
+      v = snap(v, p);
+      if (v === it[p]) return;
+      it[p] = v;
+      it.lastMsg = '';
+      syncSliders();
+      renderEquation();
+      renderGraph();
+      if (els.feedback.className.indexOf('bad') !== -1) renderStatus();
+      save(false);
+    }
+
+    function diagnose(ch, it) {
+      var t = { a: ch.a, h: ch.h, k: ch.k };
+      var sameA = Math.abs(it.a - t.a) < 1e-9;
+      var samePos;
+      if (ch.parent === 'linear') samePos = Math.abs((it.k - it.a * it.h) - (t.k - t.a * t.h)) < 1e-9;
+      else samePos = Math.abs(it.h - t.h) < 1e-9 && Math.abs(it.k - t.k) < 1e-9;
+      var key = PARENTS[ch.parent].key;
+      if (ch.parent === 'linear') {
+        if (sameA && !samePos) return 'Right slope! Now shift the line into place.';
+        if (!sameA && samePos) return 'Right y-intercept! Now adjust the slope <b>a</b>.';
+        return 'Not yet. Compare the steepness of the two lines first.';
+      }
+      if (sameA && !samePos) return 'Right shape! Now move the ' + key + ' into place.';
+      if (!sameA && samePos) return 'Your ' + key + ' is in the right spot. Now adjust <b>a</b> (stretch, shrink or flip).';
+      return 'Not yet. Try lining up the ' + key + ' first.';
+    }
+
+    function doCheck() {
+      if (busy) return;
+      var ch = cur(), it = item();
+      if (it.status !== 'open') return;
+      it.checks++;
+      if (curvesMatch(ch.parent, ch, it, CFG.tolerance)) {
+        it.status = 'matched';
+        it.points = (CFG.allowHints && it.hint) ? 1 : 2;
+        it.lastMsg = '';
+        celebrate(it.points);
+      } else if (CFG.maxChecks > 0 && it.checks >= CFG.maxChecks) {
+        it.status = 'missed';
+        it.points = 0;
+        shake();
+      } else {
+        var left = CFG.maxChecks > 0 ? CFG.maxChecks - it.checks : -1;
+        it.lastMsg = diagnose(ch, it) + (left >= 0 ? ' <b>' + left + '</b> check' + (left === 1 ? '' : 's') + ' left.' : '');
+        shake();
+      }
+      renderAll();
+      save(true);
+    }
+
+    function doHint() {
+      var it = item();
+      if (!CFG.allowHints || it.status !== 'open' || it.hint) return;
+      it.hint = true;
+      renderAll();
+      save(true);
+    }
+
+    function doNext() {
+      if (busy) return;
+      if (S.idx < CFG.challenges.length - 1) {
+        S.idx++;
+        renderChallenge();
+      } else {
+        S.phase = 'results';
+        showResults();
+        renderDots();
+      }
+      save(true);
+    }
+
+    function shake() {
+      var g = els['graph-card'];
+      g.classList.remove('shake');
+      void g.offsetWidth;
+      g.classList.add('shake');
+    }
+
+    function celebrate(points) {
+      busy = true;
+      var ch = cur();
+      var kp = keyPoint(ch, ch);
+      var cx = GX(Math.max(-9, Math.min(9, kp.x))), cy = GY(Math.max(-9, Math.min(9, kp.y)));
+      var fx = els.fx, parts = [], i, ns = 'http://www.w3.org/2000/svg';
+      var colors = ['#3ddc84', '#2ee6ff', '#ffd166', '#ff4fa3', '#c4a5ff', '#ffffff'];
+      fx.innerHTML = '';
+      for (i = 0; i < 3; i++) {
+        var ring = document.createElementNS(ns, 'circle');
+        ring.setAttribute('cx', cx); ring.setAttribute('cy', cy); ring.setAttribute('fill', 'none');
+        ring.setAttribute('stroke', i === 1 ? '#2ee6ff' : '#3ddc84'); ring.setAttribute('stroke-width', '3');
+        fx.appendChild(ring);
+        parts.push({ el: ring, ring: true, delay: i * 120 });
+      }
+      for (i = 0; i < 34; i++) {
+        var c = document.createElementNS(ns, 'circle');
+        c.setAttribute('r', 2 + Math.random() * 3);
+        c.setAttribute('fill', colors[i % colors.length]);
+        fx.appendChild(c);
+        var ang = Math.random() * Math.PI * 2, sp = 90 + Math.random() * 160;
+        parts.push({ el: c, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 60, delay: 0 });
+      }
+      els['match-stars'].textContent = points === 2 ? '★ ★' : '★';
+      els['match-badge'].classList.add('show');
+      var t0 = null, dur = 1100;
+      function frame(ts) {
+        if (t0 === null) t0 = ts;
+        var t = ts - t0;
+        parts.forEach(function (p) {
+          var tt = Math.max(0, t - p.delay) / 1000;
+          if (p.ring) {
+            p.el.setAttribute('r', 8 + tt * 260);
+            p.el.setAttribute('stroke-opacity', Math.max(0, 1 - tt * 1.6));
+          } else {
+            p.el.setAttribute('cx', cx + p.vx * tt);
+            p.el.setAttribute('cy', cy + p.vy * tt + 260 * tt * tt);
+            p.el.setAttribute('fill-opacity', Math.max(0, 1 - tt * 1.1));
+          }
+        });
+        if (t < dur) window.requestAnimationFrame(frame);
+        else {
+          fx.innerHTML = '';
+          busy = false;
+        }
+      }
+      window.requestAnimationFrame(frame);
+      setTimeout(function () { els['match-badge'].classList.remove('show'); }, 1500);
+      setTimeout(function () { busy = false; }, dur + 200);
+    }
+
+    // Drag the key point on the graph (moves h and/or k in 0.5 steps)
+    var dragging = false;
+    function svgPoint(evt) {
+      var svg = els.graph, p = svg.createSVGPoint();
+      p.x = evt.clientX; p.y = evt.clientY;
+      var m = svg.getScreenCTM();
+      if (!m) return null;
+      var q = p.matrixTransform(m.inverse());
+      return { x: q.x / 20 - 10, y: 10 - q.y / 20 };
+    }
+    function onDragMove(evt) {
+      if (!dragging) return;
+      var g = svgPoint(evt);
+      if (!g) return;
+      var ch = cur(), it = item(), changed = false;
+      if (has(ch.unlocked, 'h')) { var nh = snap(g.x, 'h'); if (nh !== it.h) { it.h = nh; changed = true; } }
+      if (has(ch.unlocked, 'k')) { var nk = snap(g.y, 'k'); if (nk !== it.k) { it.k = nk; changed = true; } }
+      if (changed) {
+        it.lastMsg = '';
+        syncSliders(); renderEquation(); renderGraph();
+        save(false);
+      }
+      evt.preventDefault();
+    }
+    function hookDrag() {
+      var h = els.handle;
+      h.addEventListener('pointerdown', function (evt) {
+        if (item().status !== 'open') return;
+        dragging = true;
+        h.style.cursor = 'grabbing';
+        try { h.setPointerCapture(evt.pointerId); } catch (e) { /* ignore */ }
+        evt.preventDefault();
+      });
+      h.addEventListener('pointermove', onDragMove);
+      function end() { if (dragging) { dragging = false; h.style.cursor = 'grab'; renderStatus(); } }
+      h.addEventListener('pointerup', end);
+      h.addEventListener('pointercancel', end);
+    }
+
+    // ------------------------------------------------------------------
+    // Intro, results, submit
+    // ------------------------------------------------------------------
+    function showIntro() {
+      els['intro-score'].innerHTML = rulesText(true);
+      els.intro.classList.add('visible');
+      els.results.classList.remove('visible');
+    }
+
+    function miniGraph(ch, it) {
+      var s = '<svg viewBox="0 0 400 400" aria-hidden="true"><line x1="0" y1="200" x2="400" y2="200" stroke="rgba(220,228,255,0.35)" stroke-width="4"/><line x1="200" y1="0" x2="200" y2="400" stroke="rgba(220,228,255,0.35)" stroke-width="4"/>';
+      s += '<path d="' + curvePath(ch.parent, ch.a, ch.h, ch.k) + '" fill="none" stroke="#ff4fa3" stroke-width="14" stroke-dasharray="26 18" stroke-linecap="round"/>';
+      s += '<path d="' + curvePath(ch.parent, it.a, it.h, it.k) + '" fill="none" stroke="#2ee6ff" stroke-width="10" stroke-linecap="round"/>';
+      return s + '</svg>';
+    }
+
+    function showResults() {
+      var tt = totals();
+      els['res-num'].textContent = tt.points + ' / ' + tt.max;
+      els['res-of'].textContent = 'points · ' + Math.round(tt.points / tt.max * 100) + '%';
+      var h = '';
+      CFG.challenges.forEach(function (ch, i) {
+        var it = S.items[i];
+        var note = it.status === 'matched' ? ('Matched' + (it.hint ? ' with a hint' : '') + ' · ' + it.checks + ' check' + (it.checks === 1 ? '' : 's'))
+          : (it.status === 'missed' ? 'Not matched · you had ' + equationHTML(ch.parent, it.a, it.h, it.k, true) : 'Not attempted');
+        h += '<div class="ritem">' + miniGraph(ch, it) +
+          '<div><div class="req">' + equationHTML(ch.parent, ch.a, ch.h, ch.k, true) + '</div><div class="rsub">' + (i + 1) + '. ' + PARENTS[ch.parent].label + ' · ' + note + '</div></div>' +
+          '<span class="pts p' + it.points + '">' + it.points + ' pt' + (it.points === 1 ? '' : 's') + '</span></div>';
+      });
+      els['res-list'].innerHTML = h;
+      els['res-rules'].innerHTML = rulesText(true);
+      var btn = els['btn-submit'], msg = els['submit-msg'];
+      if (S.submitted) {
+        btn.disabled = true;
+        btn.textContent = mode === 'preview' ? 'Preview: not submitted' : 'Submitted ✓';
+        msg.className = 'submit-msg ' + (S.submitNoteClass || 'ok');
+        msg.textContent = S.submitNote || '';
+      } else {
+        btn.disabled = false;
+        btn.textContent = mode === 'preview' ? 'Submit my score' : 'Submit my score';
+        msg.className = 'submit-msg';
+        msg.textContent = '';
+      }
+      els.intro.classList.remove('visible');
+      els.results.classList.add('visible');
+    }
+
+    function buildArtifacts() {
+      var tt = totals();
+      return {
+        version: '1.0',
+        title: CFG.title,
+        settings: { tolerance: CFG.tolerance, maxChecks: CFG.maxChecks, allowHints: CFG.allowHints, showEquation: CFG.showEquation },
+        points: tt.points,
+        maxPoints: tt.max,
+        percent: Math.round(tt.points / tt.max * 100),
+        challenges: CFG.challenges.map(function (ch, i) {
+          var it = S.items[i];
+          return {
+            parent: ch.parent,
+            target: { a: ch.a, h: ch.h, k: ch.k },
+            unlocked: ch.unlocked.slice(),
+            final: { a: it.a, h: it.h, k: it.k },
+            status: it.status,
+            matched: it.status === 'matched',
+            hintUsed: !!it.hint,
+            checks: it.checks,
+            points: it.points,
+            targetEquation: equationHTML(ch.parent, ch.a, ch.h, ch.k, true),
+            studentEquation: equationHTML(ch.parent, it.a, it.h, it.k, true)
+          };
+        })
+      };
+    }
+
+    function doSubmit() {
+      var btn = els['btn-submit'], msg = els['submit-msg'];
+      if (S.submitted) return;
+      var tt = totals();
+      if (mode !== 'live') {
+        S.submitted = true;
+        S.submitNote = 'Preview only: your score of ' + tt.points + ' / ' + tt.max + ' was NOT submitted. In Canvas it goes straight to the gradebook.';
+        S.submitNoteClass = 'warn';
+        showResults();
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Submitting…';
+      msg.className = 'submit-msg';
+      msg.textContent = '';
+      var artifacts = buildArtifacts();
+      var comment = 'Graph Match: ' + tt.points + '/' + tt.max + ' points (' + artifacts.challenges.filter(function (c) { return c.matched; }).length + ' of ' + artifacts.challenges.length + ' graphs matched)';
+      function fail(text) {
+        btn.disabled = false;
+        btn.textContent = 'Retry submit';
+        msg.className = 'submit-msg bad';
+        msg.textContent = text || 'Could not submit. Check your connection and try again.';
+      }
+      var p;
+      try { p = Zest.submitScore(tt.points, { maxScore: tt.max, artifacts: artifacts, comment: comment }); }
+      catch (e) { fail(); return; }
+      p.then(function (result) {
+        if (!result || !result.success) { fail('Could not submit: ' + ((result && result.error) || 'unknown error') + '.'); return; }
+        S.submitted = true;
+        if (result.agsStatus === 'failed') {
+          S.submitNote = 'Your work is saved. Canvas has not shown the grade yet; it will appear shortly, so there is no need to submit again.';
+          S.submitNoteClass = 'warn';
+        } else if (result.agsStatus === 'skipped') {
+          S.submitNote = 'Your work is saved. This page is not a graded assignment, so no grade was sent to Canvas.';
+          S.submitNoteClass = 'ok';
+        } else {
+          S.submitNote = 'Your score of ' + tt.points + ' / ' + tt.max + ' is in the Canvas gradebook.';
+          S.submitNoteClass = 'ok';
+        }
+        save(true);
+        showResults();
+        els['btn-restart'].hidden = !allowRetry;
+      }, function () { fail(); });
+    }
+
+    // Two-click start over
+    var restartArmed = null;
+    function doRestart() {
+      var b = els['btn-restart'];
+      if (!restartArmed) {
+        b.textContent = 'Tap again to reset';
+        b.classList.add('armed');
+        restartArmed = setTimeout(function () { restartArmed = null; b.textContent = 'Start over'; b.classList.remove('armed'); }, 4000);
+        return;
+      }
+      clearTimeout(restartArmed); restartArmed = null;
+      b.textContent = 'Start over'; b.classList.remove('armed');
+      if (mode === 'live') { try { Zest.clearState(); } catch (e) { /* ignore */ } }
+      S = freshState();
+      els.results.classList.remove('visible');
+      renderChallenge();
+      showIntro();
+    }
+
+    function toast(text) {
+      els.toast.textContent = text;
+      els.toast.classList.add('visible');
+      setTimeout(function () { els.toast.classList.remove('visible'); }, 3200);
+    }
+
+    // ------------------------------------------------------------------
+    // Layout: graph is a square sized to the space available
+    // ------------------------------------------------------------------
+    function layout() {
+      var W = window.innerWidth, H = window.innerHeight;
+      var wide = W >= 720 && W > H * 1.15;
+      document.body.classList.toggle('wide', wide);
+      var stage = els.stage, g = els['graph-card'];
+      var sh = stage.clientHeight, sw = stage.clientWidth, size;
+      if (wide) size = Math.min(sh - 28, sw * 0.6);
+      else size = Math.min(sw - 24, Math.max(240, sh * 0.47));
+      size = Math.max(200, Math.floor(size));
+      g.style.width = size + 'px';
+      g.style.height = size + 'px';
+    }
+
+    // ------------------------------------------------------------------
+    // Start-up: live (Canvas) or preview (no context within 1.2 s)
+    // ------------------------------------------------------------------
+    var uiHooked = false;
+    function hookUI() {
+      if (uiHooked) return;
+      uiHooked = true;
+      els.grid.innerHTML = gridSVG();
+      els['btn-check'].addEventListener('click', doCheck);
+      els['btn-hint'].addEventListener('click', doHint);
+      els['btn-next'].addEventListener('click', doNext);
+      els['btn-start'].addEventListener('click', function () {
+        S.phase = 'play';
+        els.intro.classList.remove('visible');
+        renderDots();
+        save(true);
+      });
+      els['btn-submit'].addEventListener('click', doSubmit);
+      els['btn-restart'].addEventListener('click', doRestart);
+      hookDrag();
+      window.addEventListener('resize', layout);
+    }
+
+    function begin(saved) {
+      document.body.classList.remove('loading');
+      els.title.textContent = CFG.title;
+      document.title = CFG.title;
+      if (saved) S = saved; else S = freshState();
+      els['btn-restart'].hidden = S.submitted && !allowRetry;
+      renderChallenge();
+      layout();
+      if (S.phase === 'intro') showIntro();
+      else if (S.phase === 'results') showResults();
+      else { els.intro.classList.remove('visible'); els.results.classList.remove('visible'); }
+    }
+
+    function startPreview() {
+      if (mode) return;
+      mode = 'preview';
+      els['preview-banner'].classList.add('visible');
+      CFG = sanitizeConfig(DEFAULT_CONFIG);
+      hookUI();
+      begin(null);
+    }
+
+    function startLive() {
+      if (mode === 'live') return;
+      var wasPreview = mode === 'preview';
+      mode = 'live';
+      els['preview-banner'].classList.remove('visible');
+      document.body.classList.add('loading');
+      hookUI();
+      if (wasPreview) { els.intro.classList.remove('visible'); els.results.classList.remove('visible'); }
+      var raw = null;
+      try { raw = Zest.getAssessmentConfig(); } catch (e) { raw = null; }
+      CFG = sanitizeConfig(raw);
+      var att = null;
+      try { att = typeof Zest.getAttempts === 'function' ? Zest.getAttempts() : null; } catch (e) { att = null; }
+      allowRetry = !(att && att.canRetry === false);
+      if (!syncHooked) {
+        syncHooked = true;
+        els.sync.classList.add('visible');
+        var labels = { synced: 'Saved', dirty: 'Saving soon', syncing: 'Saving…', error: 'Save failed, retrying', expired: 'Reopen from Canvas to keep saving' };
+        Zest.onSyncStatus(function (status) {
+          els['sync-dot'].className = 'sync-dot ' + status;
+          els['sync-text'].textContent = labels[status] || status;
+        });
+      }
+      layout();
+      var done = false;
+      function finish(state) {
+        if (done) return;
+        done = true;
+        var ok = validState(state);
+        begin(ok ? state : null);
+        if (ok && (state.phase !== 'intro' || state.items[0].checks > 0)) toast('Welcome back! Your progress has been restored.');
+      }
+      try {
+        Zest.loadState().then(finish, function () { finish(null); });
+      } catch (e) { finish(null); }
+    }
+
+    function boot() {
+      cacheEls();
+      layout();
+      if (window.Zest && typeof Zest.onReady === 'function') {
+        Zest.onReady(function () { startLive(); });
+        setTimeout(function () {
+          if (!mode && !(Zest.isReady && Zest.isReady())) startPreview();
+        }, 1200);
+      } else {
+        startPreview();
+      }
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+    else boot();
+  })();
+  </script>
+</body>
+</html>

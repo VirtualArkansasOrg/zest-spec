@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Escape the Archive</title>
+  <script src="/public/zest-bridge.js"></script>
+  <style>
+    :root {
+      --bg: #17110c;
+      --bg2: #221912;
+      --panel: #2a2018;
+      --line: #4a3a2a;
+      --ink: #f3e9d6;
+      --mute: #b9a88c;
+      --brass: #d9a84a;
+      --brass2: #f0c96b;
+      --paper: #f4e7c8;
+      --paper-ink: #3a2a18;
+      --blue: #0770A2;
+      --blue2: #1a8fc7;
+      --ok: #3fbf7f;
+      --bad: #e5534b;
+      --serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.45;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button { font-family: inherit; cursor: pointer; }
+    .app { height: 100%; display: flex; flex-direction: column; position: relative; }
+
+    /* Preview banner */
+    .preview-banner {
+      display: none; background: #3b2f1c; color: #f7dfa6; font-size: 12.5px;
+      text-align: center; padding: 6px 10px; border-bottom: 1px solid #5a4526;
+    }
+    .preview-banner.visible { display: block; }
+
+    /* Header */
+    .top {
+      display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+      background: linear-gradient(#0f0b08, #1a130d); border-bottom: 1px solid var(--line);
+      flex: 0 0 auto;
+    }
+    .brand { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 auto; }
+    .brand svg { flex: 0 0 auto; }
+    .brand h1 {
+      font-family: var(--serif); font-size: 19px; font-weight: 700; letter-spacing: .5px;
+      color: var(--brass2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .brand small { display: block; font-family: var(--sans); font-size: 11px; color: var(--mute); font-weight: 500; letter-spacing: 1px; text-transform: uppercase; }
+    .pill {
+      flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
+      background: #0c0906; border: 1px solid var(--line); border-radius: 999px;
+      padding: 4px 11px; font-family: var(--mono); font-size: 14px; color: var(--ink);
+    }
+    .pill.warn { color: #ffb4a8; border-color: #8a3a2f; }
+    .pill .k { font-family: var(--sans); font-size: 10.5px; color: var(--mute); text-transform: uppercase; letter-spacing: 1px; }
+    .sync { font-size: 11px; color: var(--mute); display: none; align-items: center; gap: 5px; flex: 0 0 auto; }
+    .sync.visible { display: inline-flex; }
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #27ae60; display: inline-block; }
+    .sync-dot.dirty { background: #f39c12; }
+    .sync-dot.syncing { background: #3498db; animation: pulse 1s infinite; }
+    .sync-dot.error, .sync-dot.expired { background: #e74c3c; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+    /* Main layout */
+    .main { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+    .stage { flex: 0 0 auto; padding: 10px 12px 0; }
+    .scene-wrap {
+      position: relative; border-radius: 12px; overflow: hidden; border: 1px solid var(--line);
+      background: #120d09; box-shadow: inset 0 0 40px rgba(0,0,0,.6);
+    }
+    .scene { display: block; width: 100%; height: min(30vh, 210px); }
+    .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+    .chip {
+      display: flex; align-items: center; gap: 6px; min-height: 46px; padding: 5px 7px;
+      background: var(--panel); border: 1.5px solid var(--line); border-radius: 10px;
+      color: var(--ink); text-align: left; font-size: 12px; line-height: 1.15; transition: border-color .2s, background .2s;
+    }
+    .chip b { display: block; font-size: 13px; color: var(--brass2); }
+    .chip .st { font-size: 10.5px; color: var(--mute); }
+    .chip.sel { border-color: var(--brass); background: #3a2b1c; }
+    .chip.open { border-color: #2f7a55; }
+    .chip.open .st { color: var(--ok); }
+    .chip-ico { flex: 0 0 auto; }
+    .progress-line { display: none; }
+
+    .panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px 12px 18px; }
+
+    @media (min-width: 760px) {
+      .main { flex-direction: row; }
+      .stage { width: 47%; padding: 14px 8px 14px 14px; display: flex; flex-direction: column; }
+      .scene { height: auto; aspect-ratio: 480 / 300; }
+      .chips { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; }
+      .chip { min-height: 54px; font-size: 13px; padding: 8px 10px; }
+      .chip b { font-size: 14px; }
+      .chip .st { font-size: 11.5px; }
+      .progress-line { display: block; margin-top: 10px; color: var(--mute); font-size: 13px; }
+      .panel { width: 53%; padding: 14px 16px 18px 8px; }
+    }
+
+    /* Lock panel */
+    .lock-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .lock-head h2 { font-family: var(--serif); font-size: 20px; color: var(--brass2); line-height: 1.1; }
+    .lock-head .sub { font-size: 12px; color: var(--mute); text-transform: uppercase; letter-spacing: 1.2px; }
+    .big-lock { flex: 0 0 auto; }
+    .big-lock .shackle { transition: transform .5s cubic-bezier(.3,1.9,.5,1); transform-box: fill-box; transform-origin: 100% 100%; }
+    .big-lock.open .shackle { transform: translateY(-7px) rotate(-28deg); }
+    .big-lock .lbody { transition: fill .3s; }
+    .big-lock.open .lbody { fill: #2f9a67; }
+
+    .doc {
+      position: relative; background: var(--paper); color: var(--paper-ink);
+      background-image: radial-gradient(ellipse at 20% 10%, rgba(255,255,255,.55), rgba(255,255,255,0) 55%),
+                        radial-gradient(ellipse at 90% 100%, rgba(150,110,50,.22), rgba(150,110,50,0) 60%);
+      border-radius: 4px; padding: 14px 16px 12px; margin-bottom: 10px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(90,60,20,.25), inset 0 0 40px rgba(140,100,40,.18);
+      transform: rotate(-.35deg);
+    }
+    .doc:before {
+      content: ""; position: absolute; top: -7px; left: 50%; width: 70px; height: 16px; margin-left: -35px;
+      background: rgba(235,225,190,.75); box-shadow: 0 1px 2px rgba(0,0,0,.2); transform: rotate(1.5deg);
+    }
+    .doc-tag { font-family: var(--mono); font-size: 10.5px; letter-spacing: 1.5px; text-transform: uppercase; color: #8a5a22; margin-bottom: 6px; }
+    .doc q, .doc .quote { display: block; font-family: var(--serif); font-size: 16px; line-height: 1.5; font-style: italic; quotes: "\201C" "\201D"; }
+    .doc .title-line { font-family: var(--serif); font-size: 14px; margin-bottom: 8px; }
+    .doc .summary { font-family: var(--serif); font-size: 14px; line-height: 1.5; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(90,60,20,.35); }
+    .doc .summary .lbl { font-family: var(--mono); font-size: 10px; letter-spacing: 1.3px; text-transform: uppercase; color: #8a5a22; display: block; margin-bottom: 2px; }
+    .doc .cite { margin-top: 10px; font-size: 12px; color: #6b4e2c; border-top: 1px solid rgba(90,60,20,.3); padding-top: 6px; }
+    .doc .stamp {
+      position: absolute; right: 10px; bottom: 30px; font-family: var(--mono); font-size: 11px; font-weight: 700;
+      color: rgba(160,40,30,.55); border: 2px solid rgba(160,40,30,.45); border-radius: 4px; padding: 1px 6px;
+      transform: rotate(-9deg); letter-spacing: 1.5px; pointer-events: none;
+    }
+
+    .clue {
+      background: #1f1711; border: 1px solid var(--line); border-left: 4px solid var(--brass);
+      border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; font-size: 14.5px;
+    }
+    .clue .lbl { font-size: 11px; letter-spacing: 1.3px; text-transform: uppercase; color: var(--brass); font-weight: 700; display: block; margin-bottom: 2px; }
+
+    .mech { background: linear-gradient(#2c2219, #211810); border: 1px solid var(--line); border-radius: 12px; padding: 12px 10px; margin-bottom: 10px; }
+    .mech.shake { animation: shake .5s; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      15% { transform: translateX(-9px) rotate(-1deg); } 30% { transform: translateX(8px) rotate(1deg); }
+      45% { transform: translateX(-6px); } 60% { transform: translateX(5px); } 75% { transform: translateX(-2px); }
+    }
+    .mech.unlocked { border-color: #2f7a55; box-shadow: 0 0 0 3px rgba(63,191,127,.25), 0 0 30px rgba(63,191,127,.2); }
+
+    .wheels { display: flex; justify-content: center; gap: 6px; }
+    .wheel { flex: 1 1 0; max-width: 64px; display: flex; flex-direction: column; align-items: stretch; }
+    .wbtn {
+      height: 36px; border: 1px solid #5a4630; background: #3a2d20; color: var(--brass2);
+      font-size: 14px; border-radius: 8px; touch-action: manipulation;
+    }
+    .wbtn:active { background: #4b3a28; }
+    .wwin {
+      position: relative; height: 84px; margin: 5px 0; border-radius: 8px; overflow: hidden; touch-action: none;
+      background: linear-gradient(#0d0a07, #3a3128 22%, #cfc6b8 44%, #efe8dc 50%, #cfc6b8 56%, #3a3128 78%, #0d0a07);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.6), inset 0 2px 6px rgba(0,0,0,.6);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none;
+    }
+    .wwin span { display: block; font-family: var(--mono); font-weight: 700; line-height: 1; }
+    .wwin .wp, .wwin .wn { font-size: 15px; color: rgba(255,255,255,.35); height: 20px; }
+    .wwin .wc { font-size: 30px; color: #1b140d; height: 36px; line-height: 36px; }
+    .wwin.roll .wc { animation: roll .18s ease-out; }
+    .wwin.rolld .wc { animation: rolld .18s ease-out; }
+    @keyframes roll { from { transform: translateY(14px); opacity: .3; } to { transform: none; opacity: 1; } }
+    @keyframes rolld { from { transform: translateY(-14px); opacity: .3; } to { transform: none; opacity: 1; } }
+    .mech-note { text-align: center; color: var(--mute); font-size: 12px; margin-top: 8px; }
+
+    .choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 8px; }
+    .choice {
+      display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px 7px;
+      background: #3a2d20; border: 2px solid #5a4630; border-radius: 10px; color: var(--ink);
+      font-size: 11.5px; line-height: 1.2; text-align: center; min-height: 104px;
+    }
+    .choice svg { width: 52px; height: 52px; }
+    .choice.sel { border-color: var(--brass2); background: #4a3824; box-shadow: 0 0 0 3px rgba(240,201,107,.25); }
+
+    .orders { display: flex; flex-direction: column; gap: 7px; }
+    .ord {
+      display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 7px 10px;
+      background: var(--paper); color: var(--paper-ink); border: 2px solid transparent; border-radius: 6px;
+      font-family: var(--serif); font-size: 14.5px; text-align: left; box-shadow: 0 2px 5px rgba(0,0,0,.35);
+    }
+    .ord .badge {
+      flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; border: 2px dashed #a58a5e; color: #a58a5e;
+      display: flex; align-items: center; justify-content: center; font-family: var(--sans); font-weight: 800; font-size: 15px;
+    }
+    .ord.picked { border-color: var(--brass); }
+    .ord.picked .badge { border: 0; background: var(--blue); color: #fff; animation: pop .25s; }
+    @keyframes pop { from { transform: scale(.4); } to { transform: scale(1); } }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .btn {
+      border: 0; border-radius: 10px; padding: 12px 18px; font-size: 15px; font-weight: 700; min-height: 46px;
+      transition: background .2s, transform .1s; touch-action: manipulation;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #065a82; }
+    .btn-hint { background: transparent; color: var(--brass2); border: 1.5px solid #6b5333; font-weight: 600; font-size: 14px; }
+    .btn-hint.arm { border-color: var(--brass2); background: #3a2b1c; }
+    .btn-ghost { background: transparent; color: var(--mute); border: 1px solid var(--line); font-weight: 600; font-size: 13px; padding: 9px 14px; min-height: 40px; }
+    .btn-ghost.arm { color: #ffb4a8; border-color: #c0392b; background: #3a1c18; }
+    .btn-brass { background: linear-gradient(#f0c96b, #c9913a); color: #2a1a08; }
+    .feedback { min-height: 22px; margin-top: 8px; font-size: 14px; }
+    .feedback.bad { color: #ff9a8f; }
+    .feedback.good { color: #7fe0ae; font-weight: 700; }
+    .hint-box { margin-top: 10px; background: #1f2a1f; border: 1px solid #3c5a3c; border-radius: 8px; padding: 9px 12px; font-size: 14px; color: #cfe8cf; }
+    .hint-box b { color: #9fe09f; }
+    .open-banner { display: flex; align-items: center; gap: 8px; background: #16301f; border: 1px solid #2f7a55; color: #bff0d3; border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+    .footer-row { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--line); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; color: var(--mute); font-size: 12.5px; }
+
+    /* Scene */
+    .padlock { cursor: pointer; }
+    .padlock .shackle { transition: transform .55s cubic-bezier(.3,1.9,.5,1); transform-box: fill-box; transform-origin: 100% 100%; }
+    .padlock.open .shackle { transform: translateY(-8px) rotate(-30deg); }
+    .padlock .pbody { transition: fill .35s; }
+    .padlock.open .pbody { fill: url(#gOpen); }
+    .padlock .glow { opacity: 0; transition: opacity .4s; }
+    .padlock.open .glow { opacity: 1; }
+    .padlock .ring { opacity: 0; transition: opacity .2s; }
+    .padlock.sel .ring { opacity: 1; }
+    .padlock.shake .pinner { animation: pshake .45s; transform-box: fill-box; transform-origin: 50% 0; }
+    @keyframes pshake { 0%,100% { transform: rotate(0); } 20% { transform: rotate(12deg); } 40% { transform: rotate(-10deg); } 60% { transform: rotate(7deg); } 80% { transform: rotate(-4deg); } }
+    .door-leaf { transition: transform 1.4s cubic-bezier(.6,0,.3,1); transform-box: fill-box; transform-origin: 0% 50%; }
+    .escaped .door-leaf { transform: perspective(600px) rotateY(-78deg); }
+    .escaped .padlocks { opacity: 0; transition: opacity .5s; }
+    .door-light { opacity: .25; transition: opacity 1.4s; }
+    .escaped .door-light { opacity: 1; }
+    .mote { animation: drift 9s linear infinite; }
+    @keyframes drift { from { transform: translate(0, 0); opacity: 0; } 20% { opacity: .8; } to { transform: translate(18px, -70px); opacity: 0; } }
+    .cone { animation: flicker 5s ease-in-out infinite; }
+    @keyframes flicker { 0%, 100% { opacity: .9; } 47% { opacity: .75; } 50% { opacity: .95; } 53% { opacity: .8; } }
+
+    /* Overlays */
+    .overlay {
+      position: absolute; left: 0; right: 0; top: 0; bottom: 0; z-index: 20; display: none;
+      align-items: center; justify-content: center; padding: 14px; background: rgba(8,5,3,.72);
+    }
+    .overlay.visible { display: flex; }
+    .card {
+      width: 100%; max-width: 560px; max-height: 100%; overflow-y: auto; background: linear-gradient(#2e2319, #221910);
+      border: 1px solid #6b5333; border-radius: 14px; padding: 20px 20px 18px; box-shadow: 0 20px 60px rgba(0,0,0,.6);
+    }
+    .card h2 { font-family: var(--serif); color: var(--brass2); font-size: 26px; line-height: 1.15; margin-bottom: 8px; }
+    .card p { margin-bottom: 10px; color: #e8dcc5; }
+    .rules { list-style: none; margin: 10px 0 14px; display: grid; gap: 6px; }
+    .rules li { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: #e8dcc5; }
+    .rules li .ri { flex: 0 0 22px; height: 22px; border-radius: 6px; background: #3a2b1c; color: var(--brass2); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+    .result-card { text-align: center; animation: rise .5s ease-out; }
+    @keyframes rise { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .score-big { font-family: var(--serif); font-size: 52px; font-weight: 700; color: #fff; line-height: 1; margin: 6px 0 2px; }
+    .score-big small { font-size: 22px; color: var(--mute); }
+    .bd { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13.5px; text-align: left; }
+    .bd th { font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+    .bd td { padding: 7px 6px; border-bottom: 1px solid #3a2d20; }
+    .bd td.n { text-align: right; font-family: var(--mono); }
+    .bd .y { color: var(--ok); font-weight: 700; }
+    .bd .x { color: #ff9a8f; font-weight: 700; }
+    .status { border-radius: 10px; padding: 10px 12px; font-size: 14px; margin: 8px 0 10px; text-align: left; }
+    .status.info { background: #1c2a36; border: 1px solid #2c4a63; color: #cfe6f7; }
+    .status.ok { background: #16301f; border: 1px solid #2f7a55; color: #bff0d3; }
+    .status.warn { background: #3a2c12; border: 1px solid #7a5a1f; color: #f7dfa6; }
+    .status.err { background: #3a1c18; border: 1px solid #8a3a2f; color: #ffc9c1; }
+    .toast {
+      position: absolute; left: 50%; top: 64px; transform: translateX(-50%); z-index: 30; display: none;
+      background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; border-radius: 8px; padding: 8px 14px; font-size: 13px;
+      box-shadow: 0 6px 20px rgba(0,0,0,.4); max-width: 90%;
+    }
+    .toast.visible { display: block; }
+    .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  </style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="preview-banner" id="preview-banner">Preview: try it out. Nothing is saved or submitted.</div>
+  <header class="top">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 40 40" aria-hidden="true">
+        <path d="M12 18 V12 a8 8 0 0 1 16 0 V18" fill="none" stroke="#c9ccd2" stroke-width="4"/>
+        <rect x="7" y="17" width="26" height="20" rx="4" fill="#d9a84a"/>
+        <circle cx="20" cy="25" r="3" fill="#3a2a18"/><rect x="18.8" y="26" width="2.4" height="6" fill="#3a2a18"/>
+      </svg>
+      <h1>Escape the Archive<small>U.S. History &middot; Primary Sources</small></h1>
+    </div>
+    <span class="sync" id="sync"><span class="sync-dot" id="sync-dot"></span><span id="sync-text">Saved</span></span>
+    <span class="pill" id="lockcount"><span class="k">Open</span><span id="opencount">0/4</span></span>
+    <span class="pill" id="timer"><span class="k" id="timer-k">Time</span><span id="timer-v">0:00</span></span>
+  </header>
+
+  <div class="main">
+    <div class="stage">
+      <div class="scene-wrap" id="scene-wrap">
+        <svg class="scene" id="scene" viewBox="0 0 480 300" preserveAspectRatio="xMidYMid slice" role="img" aria-label="A locked archive room: bookshelves, a document case, and a door held shut by four padlocks">
+          <defs>
+            <linearGradient id="gWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b2019"/><stop offset="1" stop-color="#1a120c"/></linearGradient>
+            <linearGradient id="gWood" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5b3a22"/><stop offset=".5" stop-color="#6d4629"/><stop offset="1" stop-color="#4a2f1b"/></linearGradient>
+            <linearGradient id="gShelf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b4526"/><stop offset="1" stop-color="#3b2413"/></linearGradient>
+            <linearGradient id="gBrass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3cf78"/><stop offset=".55" stop-color="#c8922f"/><stop offset="1" stop-color="#8d6220"/></linearGradient>
+            <linearGradient id="gOpen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ff0bd"/><stop offset=".6" stop-color="#2fa56b"/><stop offset="1" stop-color="#1c6e46"/></linearGradient>
+            <radialGradient id="gLight" cx=".5" cy=".5" r=".7"><stop offset="0" stop-color="#fff7d6"/><stop offset=".5" stop-color="#ffd98a"/><stop offset="1" stop-color="#b8792b"/></radialGradient>
+            <radialGradient id="gLamp" cx=".5" cy="0" r="1"><stop offset="0" stop-color="#ffd98a" stop-opacity=".45"/><stop offset="1" stop-color="#ffd98a" stop-opacity="0"/></radialGradient>
+            <radialGradient id="gGlow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#6ff0a8" stop-opacity=".75"/><stop offset="1" stop-color="#6ff0a8" stop-opacity="0"/></radialGradient>
+            <radialGradient id="gVig" cx=".5" cy=".45" r=".75"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".65"/></radialGradient>
+            <linearGradient id="gGlass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#cfe8ff" stop-opacity=".28"/><stop offset=".5" stop-color="#cfe8ff" stop-opacity=".06"/><stop offset="1" stop-color="#cfe8ff" stop-opacity=".18"/></linearGradient>
+          </defs>
+          <rect x="0" y="0" width="480" height="300" fill="url(#gWall)"/>
+          <!-- wainscot and floor -->
+          <rect x="0" y="238" width="480" height="4" fill="#3b2716"/>
+          <rect x="0" y="262" width="480" height="38" fill="#120c08"/>
+          <g stroke="#1e150e" stroke-width="1"><line x1="0" y1="274" x2="480" y2="274"/><line x1="0" y1="288" x2="480" y2="288"/><line x1="60" y1="262" x2="40" y2="300"/><line x1="160" y1="262" x2="150" y2="300"/><line x1="330" y1="262" x2="340" y2="300"/><line x1="430" y1="262" x2="450" y2="300"/></g>
+          <!-- shelves (books drawn by script) -->
+          <g id="shelfL"></g>
+          <g id="shelfR"></g>
+          <!-- document case -->
+          <g>
+            <rect x="26" y="226" width="118" height="36" fill="#3b2413"/>
+            <rect x="30" y="230" width="110" height="3" fill="#6b4526"/>
+            <rect x="22" y="196" width="126" height="32" fill="url(#gGlass)" stroke="#a9c7e0" stroke-opacity=".45"/>
+            <path d="M40 222 q6 -16 30 -14 h34 q10 0 12 8 l2 6 z" fill="#e9d6a8"/>
+            <path d="M52 212 h40 M52 216 h48" stroke="#8a6a3a" stroke-width="1.2"/>
+            <rect x="112" y="210" width="16" height="12" rx="2" fill="#a8322a"/>
+            <line x1="26" y1="200" x2="60" y2="226" stroke="#fff" stroke-opacity=".25"/>
+          </g>
+          <!-- hanging lamp -->
+          <line x1="240" y1="0" x2="240" y2="14" stroke="#555" stroke-width="1.5"/>
+          <path d="M226 22 L254 22 L248 13 L232 13 Z" fill="#6b5a3a"/>
+          <polygon class="cone" points="228,22 252,22 330,262 150,262" fill="url(#gLamp)"/>
+          <!-- door frame + opening -->
+          <rect x="166" y="36" width="148" height="228" fill="#2a1a0e"/>
+          <rect class="door-light" x="172" y="42" width="136" height="220" fill="url(#gLight)"/>
+          <g class="door-leaf" id="door-leaf">
+            <rect x="172" y="42" width="136" height="220" rx="2" fill="url(#gWood)"/>
+            <rect x="182" y="52" width="116" height="84" rx="2" fill="none" stroke="#3e2615" stroke-width="3"/>
+            <rect x="182" y="146" width="116" height="104" rx="2" fill="none" stroke="#3e2615" stroke-width="3"/>
+            <rect x="200" y="62" width="80" height="18" rx="2" fill="#e9d6a8"/>
+            <text x="240" y="75" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#4a2f1b" letter-spacing="1.5">ARCHIVES</text>
+            <circle cx="296" cy="160" r="5" fill="url(#gBrass)"/>
+          </g>
+          <!-- hasp bar -->
+          <g class="padlocks" id="padlocks">
+            <rect x="172" y="100" width="136" height="6" fill="#6f747c"/>
+            <rect x="172" y="176" width="136" height="6" fill="#6f747c"/>
+          </g>
+          <!-- dust motes -->
+          <g fill="#ffe7b0">
+            <circle class="mote" cx="210" cy="200" r="1.2" style="animation-delay:0s"/>
+            <circle class="mote" cx="250" cy="230" r="1" style="animation-delay:2.5s"/>
+            <circle class="mote" cx="230" cy="170" r="1.4" style="animation-delay:4.5s"/>
+            <circle class="mote" cx="275" cy="210" r="1" style="animation-delay:6.5s"/>
+          </g>
+          <rect x="0" y="0" width="480" height="300" fill="url(#gVig)" pointer-events="none"/>
+        </svg>
+      </div>
+      <div class="chips" id="chips"></div>
+      <div class="progress-line" id="progress-line"></div>
+    </div>
+    <div class="panel" id="panel" aria-live="polite"></div>
+  </div>
+
+  <div class="overlay" id="intro">
+    <div class="card">
+      <h2>Locked in the Archive</h2>
+      <p>You stayed too late in the reading room of the national archive, and the door has been padlocked for the night. Four locks hold it shut. The combinations are hidden in the documents on the shelves.</p>
+      <ul class="rules" id="rules"></ul>
+      <button class="btn btn-brass" id="start-btn" style="width:100%">Enter the archive</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="result">
+    <div class="card result-card" id="result-card"></div>
+  </div>
+
+  <div class="toast" id="toast">Your previous progress has been restored.</div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ---------------------------------------------------------------
+  // Content. Answers are NOT stored here: each lock keeps a one-way
+  // check value, and the readable key lives in answer-key.json
+  // (declared in zest.json, shown to teachers in review.html).
+  // ---------------------------------------------------------------
+  var POINTS = 25, HINT_COST = 5, MAX_SCORE = 100;
+  var CHECK = { l1: 'n4x0y7', l2: '1839b1d', l3: 'pxhtei', l4: 'z4v6yk' };
+  function fingerprint(s) {
+    s = 'archive|' + s;
+    var x = 5381;
+    for (var i = 0; i < s.length; i++) { x = ((x << 5) + x + s.charCodeAt(i)) | 0; }
+    return (x >>> 0).toString(36);
+  }
+
+  var WHEEL_LETTERS = ['JLWDTPS', 'UIEAOR', 'SBLFNMR', 'TEFAOR', 'IRANEO', 'CTRLSN', 'EYSDNA'];
+
+  var CHOICES = [
+    { id: 'guard', label: 'Arkansas National Guard' },
+    { id: 'marshal', label: 'U.S. Marshals' },
+    { id: 'eagle', label: '101st Airborne Division' },
+    { id: 'court', label: 'Federal court' },
+    { id: 'anchor', label: 'U.S. Navy' }
+  ];
+
+  var EVENTS = [
+    { id: 'A', text: 'Lincoln delivers the Gettysburg Address' },
+    { id: 'B', text: 'The 19th Amendment is ratified' },
+    { id: 'C', text: 'The Declaration of Independence is adopted' },
+    { id: 'D', text: 'Soldiers escort the Little Rock Nine into Central High School' },
+    { id: 'E', text: 'The Constitution, with its Preamble, is signed' }
+  ];
+
+  var LOCKS = [
+    {
+      id: 'l1', num: 1, short: 'Year dial', name: 'The Year Dial', kind: 'digits',
+      tag: 'Document 1 · Primary source (excerpt)',
+      quote: 'Four score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.',
+      cite: 'Abraham Lincoln, Address at Gettysburg, Pennsylvania, November 19, 1863 (opening sentence).',
+      clue: 'Set the four dials to the year Lincoln’s first words point back to.',
+      hint: 'A <b>score</b> is 20 years, so “four score and seven” is 87 years. Count back 87 years from 1863.'
+    },
+    {
+      id: 'l2', num: 2, short: 'Word lock', name: 'The Word Lock', kind: 'letters',
+      tag: 'Document 2 · Primary source (complete)',
+      quote: 'We the People of the United States, in Order to form a more perfect Union, establish Justice, insure domestic Tranquility, provide for the common defence, promote the general Welfare, and secure the Blessings of Liberty to ourselves and our Posterity, do ordain and establish this Constitution for the United States of America.',
+      cite: 'Preamble, Constitution of the United States. Signed at Philadelphia, September 17, 1787.',
+      clue: 'The Preamble lists six goals for the new government. Spell the key word of the <b>fifth</b> goal on the seven letter wheels.',
+      hint: 'Each goal starts with an action verb: <b>form, establish, insure, provide, promote, secure</b>. Find the fifth verb; the lock wants the noun it acts on.'
+    },
+    {
+      id: 'l3', num: 3, short: 'Insignia', name: 'The Insignia Lock', kind: 'choice',
+      tag: 'Document 3 · Primary sources + summary',
+      title: 'Executive Order 10730: “Providing Assistance for the Removal of an Obstruction of Justice Within the State of Arkansas”',
+      quote: 'Mob rule cannot be allowed to override the decisions of our courts.',
+      summary: 'In September 1957, nine Black students were to start classes at all-white Central High School in Little Rock, Arkansas, under a federal court’s desegregation order. Governor Orval Faubus used the Arkansas National Guard to keep them out. On September 24, 1957, President Dwight D. Eisenhower signed Executive Order 10730, which placed the Arkansas National Guard under federal control and sent soldiers of the U.S. Army’s 101st Airborne Division to Little Rock. On September 25, those soldiers escorted the Little Rock Nine into the school.',
+      cite: 'Dwight D. Eisenhower, Executive Order 10730 and radio and television address on the situation in Little Rock, both September 24, 1957.',
+      clue: 'The lock is engraved with five insignia. Press the one worn by the troops who <b>escorted the Nine into</b> Central High on September 25, 1957.',
+      hint: 'Governor Faubus used one force to keep the students <b>out</b>. The lock wants the soldiers the President sent to bring them <b>in</b>.'
+    },
+    {
+      id: 'l4', num: 4, short: 'Timeline', name: 'The Timeline Lock', kind: 'order',
+      tag: 'Document 4 · Primary source (excerpt)',
+      quote: 'The right of citizens of the United States to vote shall not be denied or abridged by the United States or by any State on account of sex.',
+      cite: 'U.S. Constitution, Amendment XIX, Section 1. Passed by Congress June 4, 1919; ratified August 18, 1920.',
+      clue: 'The archivist dropped five catalog cards. Tap them from <b>oldest to newest</b>. Every date you need is on a citation line in this archive (and Lock 1’s answer is a year, too).',
+      hint: 'Check the citation line on each document card: 1787, 1863, 1920 and 1957. The Declaration of Independence is the year from Lock 1.'
+    }
+  ];
+  var LOCK_BY_ID = {};
+  for (var li = 0; li < LOCKS.length; li++) LOCK_BY_ID[LOCKS[li].id] = LOCKS[li];
+
+  // ---------------------------------------------------------------
+  // Runtime state
+  // ---------------------------------------------------------------
+  var mode = 'pending';           // 'pending' | 'preview' | 'live'
+  var readyFired = false;
+  var hintsOn = true;
+  var timeLimitMin = 0;
+  var S = null;
+  var tickTimer = null, lastTick = 0, sinceSave = 0;
+  var submitting = false, submitMsg = null;
+  var hintArmed = false, hintArmTimer = null;
+  var leaveArmed = false, leaveArmTimer = null;
+  var resetArmed = false, resetArmTimer = null;
+
+  function freshState() {
+    return {
+      v: 1, started: false, elapsed: 0, current: 'l1',
+      locks: {
+        l1: { open: false, wrong: [], hint: false, openedAt: null, active: 0, entry: null, input: [0, 0, 0, 0] },
+        l2: { open: false, wrong: [], hint: false, openedAt: null, active: 0, entry: null, input: [4, 3, 5, 4, 3, 4, 2] },
+        l3: { open: false, wrong: [], hint: false, openedAt: null, active: 0, entry: null, input: null },
+        l4: { open: false, wrong: [], hint: false, openedAt: null, active: 0, entry: null, input: [] }
+      },
+      finished: false, escaped: false, timedOut: false, submitted: false, agsStatus: null, finishedAt: null
+    };
+  }
+
+  function $(id) { return document.getElementById(id); }
+
+  function save() {
+    if (mode === 'live' && S) {
+      try { Zest.saveState(S); } catch (e) { /* ignore */ }
+    }
+  }
+
+  function fmt(ms) {
+    var s = Math.max(0, Math.round(ms / 1000));
+    var m = Math.floor(s / 60);
+    s = s % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function openCount() {
+    var n = 0;
+    for (var i = 0; i < LOCKS.length; i++) if (S.locks[LOCKS[i].id].open) n++;
+    return n;
+  }
+
+  function lockPoints(id) {
+    var L = S.locks[id];
+    if (!L.open) return 0;
+    return POINTS - (L.hint ? HINT_COST : 0);
+  }
+
+  function totalScore() {
+    var t = 0;
+    for (var i = 0; i < LOCKS.length; i++) t += lockPoints(LOCKS[i].id);
+    return t;
+  }
+
+  // ---------------------------------------------------------------
+  // Scene
+  // ---------------------------------------------------------------
+  var BOOK_COLORS = ['#7a2e2a', '#2f4f4f', '#6b4f2a', '#3b3b5c', '#8a6a2f', '#4a5d3a', '#5c2f3f', '#2d4a63', '#9b7b45'];
+  var seed = 7;
+  function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+
+  function buildShelf(g, x0, x1) {
+    var svg = '';
+    var shelvesY = [70, 128, 186];
+    svg += '<rect x="' + (x0 - 6) + '" y="22" width="' + (x1 - x0 + 12) + '" height="216" fill="#2a190d"/>';
+    for (var s = 0; s < shelvesY.length; s++) {
+      var y = shelvesY[s];
+      var x = x0;
+      while (x < x1 - 6) {
+        var w = 6 + Math.floor(rnd() * 8);
+        if (x + w > x1) break;
+        var h = 30 + Math.floor(rnd() * 20);
+        var c = BOOK_COLORS[Math.floor(rnd() * BOOK_COLORS.length)];
+        if (rnd() < 0.08 && x + h < x1) {
+          // a book lying flat
+          svg += '<rect x="' + x + '" y="' + (y - 8) + '" width="' + h + '" height="8" fill="' + c + '"/>';
+          x += h + 2;
+          continue;
+        }
+        svg += '<rect x="' + x + '" y="' + (y - h) + '" width="' + w + '" height="' + h + '" fill="' + c + '"/>';
+        svg += '<rect x="' + x + '" y="' + (y - h + 5) + '" width="' + w + '" height="2" fill="#d9a84a" opacity=".45"/>';
+        x += w + (rnd() < 0.15 ? 3 : 1);
+      }
+      svg += '<rect x="' + (x0 - 6) + '" y="' + y + '" width="' + (x1 - x0 + 12) + '" height="6" fill="url(#gShelf)"/>';
+    }
+    // archive boxes on the bottom shelf area
+    svg += '<rect x="' + (x0 + 4) + '" y="202" width="40" height="30" fill="#b99a66"/><rect x="' + (x0 + 16) + '" y="210" width="16" height="7" fill="#f4e7c8"/>';
+    svg += '<rect x="' + (x0 + 50) + '" y="206" width="36" height="26" fill="#a88a58"/><rect x="' + (x0 + 60) + '" y="213" width="16" height="6" fill="#f4e7c8"/>';
+    g.innerHTML = svg;
+  }
+
+  var PADLOCK_POS = { l1: [213, 108], l2: [267, 108], l3: [213, 184], l4: [267, 184] };
+
+  function buildPadlocks() {
+    var g = $('padlocks');
+    var html = g.innerHTML;
+    for (var i = 0; i < LOCKS.length; i++) {
+      var L = LOCKS[i];
+      var p = PADLOCK_POS[L.id];
+      html += '<g class="padlock" id="pl-' + L.id + '" data-lock="' + L.id + '" transform="translate(' + p[0] + ',' + p[1] + ')" role="button" aria-label="Lock ' + L.num + ': ' + L.name + '">' +
+        '<circle class="glow" cx="0" cy="14" r="34" fill="url(#gGlow)"/>' +
+        '<rect class="ring" x="-24" y="-24" width="48" height="62" rx="8" fill="none" stroke="#f0c96b" stroke-width="2" stroke-dasharray="4 3"/>' +
+        '<g class="pinner">' +
+          '<path class="shackle" d="M-10 2 V-9 a10 10 0 0 1 20 0 V2" fill="none" stroke="#c9ccd2" stroke-width="4.5"/>' +
+          '<rect class="pbody" x="-17" y="0" width="34" height="30" rx="5" fill="url(#gBrass)" stroke="#6b4a16" stroke-width="1"/>' +
+          '<text x="0" y="21" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="16" fill="#3a2410">' + L.num + '</text>' +
+        '</g>' +
+        '<rect x="-26" y="-26" width="52" height="66" fill="transparent"/>' +
+      '</g>';
+    }
+    g.innerHTML = html;
+    var pls = g.querySelectorAll('.padlock');
+    for (var j = 0; j < pls.length; j++) {
+      pls[j].addEventListener('click', function(ev) {
+        selectLock(this.getAttribute('data-lock'));
+      });
+    }
+  }
+
+  function lockIcon(kind, size) {
+    size = size || 26;
+    var inner = '';
+    if (kind === 'digits') inner = '<rect x="4" y="9" width="24" height="14" rx="3" fill="#3a2d20" stroke="#d9a84a"/><text x="16" y="20" text-anchor="middle" font-size="9" font-family="monospace" font-weight="700" fill="#f0c96b">1 2 3</text>';
+    else if (kind === 'letters') inner = '<rect x="4" y="9" width="24" height="14" rx="3" fill="#3a2d20" stroke="#d9a84a"/><text x="16" y="20" text-anchor="middle" font-size="9" font-family="monospace" font-weight="700" fill="#f0c96b">A B C</text>';
+    else if (kind === 'choice') inner = '<path d="M16 4 L27 9 V17 C27 23 22 27 16 29 C10 27 5 23 5 17 V9 Z" fill="#3a2d20" stroke="#d9a84a"/><path d="M11 16 l4 4 l7 -8" fill="none" stroke="#f0c96b" stroke-width="2.2"/>';
+    else inner = '<rect x="5" y="6" width="22" height="5" rx="1" fill="#f4e7c8"/><rect x="5" y="13.5" width="22" height="5" rx="1" fill="#f4e7c8"/><rect x="5" y="21" width="22" height="5" rx="1" fill="#f4e7c8"/><text x="9" y="10.5" font-size="5" font-weight="800" fill="#0770A2">1</text><text x="9" y="18" font-size="5" font-weight="800" fill="#0770A2">2</text><text x="9" y="25.5" font-size="5" font-weight="800" fill="#0770A2">3</text>';
+    return '<svg class="chip-ico" width="' + size + '" height="' + size + '" viewBox="0 0 32 32" aria-hidden="true">' + inner + '</svg>';
+  }
+
+  function renderChips() {
+    var html = '';
+    for (var i = 0; i < LOCKS.length; i++) {
+      var L = LOCKS[i], st = S.locks[L.id];
+      var cls = 'chip' + (S.current === L.id ? ' sel' : '') + (st.open ? ' open' : '');
+      var status = st.open ? '✓ Open' : (st.wrong.length ? st.wrong.length + ' tr' + (st.wrong.length === 1 ? 'y' : 'ies') : 'Locked');
+      html += '<button class="' + cls + '" data-lock="' + L.id + '" aria-label="Lock ' + L.num + ', ' + L.short + ', ' + (st.open ? 'open' : 'locked') + '">' +
+        lockIcon(L.kind, 24) + '<span><b>' + L.num + ' · ' + L.short + '</b><span class="st">' + status + '</span></span></button>';
+    }
+    $('chips').innerHTML = html;
+    var n = openCount();
+    $('opencount').textContent = n + '/4';
+    $('progress-line').textContent = n === 4 ? 'All four locks are open.' : 'Tap a padlock or a card to work on that lock. Locks can be opened in any order.';
+  }
+
+  function renderScene() {
+    for (var i = 0; i < LOCKS.length; i++) {
+      var id = LOCKS[i].id;
+      var el = $('pl-' + id);
+      if (!el) continue;
+      var cls = 'padlock' + (S.locks[id].open ? ' open' : '') + (S.current === id ? ' sel' : '');
+      el.setAttribute('class', cls);
+    }
+    var wrap = $('scene-wrap');
+    if (S.escaped) wrap.classList.add('escaped'); else wrap.classList.remove('escaped');
+  }
+
+  // ---------------------------------------------------------------
+  // Insignia art for lock 3
+  // ---------------------------------------------------------------
+  function insignia(id) {
+    var a = '';
+    if (id === 'eagle') {
+      a = '<path d="M10 14 H54 V40 C54 52 44 58 32 62 C20 58 10 52 10 40 Z" fill="#1b1b1b" stroke="#d9a84a" stroke-width="2"/>' +
+          '<rect x="12" y="4" width="40" height="9" rx="2" fill="#1b1b1b" stroke="#d9a84a" stroke-width="1.5"/>' +
+          '<text x="32" y="11" text-anchor="middle" font-size="6" font-weight="800" fill="#f0c96b" font-family="sans-serif" letter-spacing=".5">AIRBORNE</text>' +
+          '<path d="M24 50 C22 40 22 30 28 24 C33 19 41 20 44 25 L50 27 L44 30 C44 36 40 38 36 38 C38 43 38 47 36 52 Z" fill="#fff"/>' +
+          '<path d="M44 25 L50 27 L44 30 Z" fill="#f0c96b"/><circle cx="39" cy="27" r="1.6" fill="#1b1b1b"/>';
+    } else if (id === 'guard') {
+      a = '<rect x="8" y="10" width="48" height="36" rx="2" fill="#b3202a"/>' +
+          '<path d="M32 13 L53 28 L32 43 L11 28 Z" fill="#fff"/><path d="M32 17 L48 28 L32 39 L16 28 Z" fill="#1f3a93"/>' +
+          '<g fill="#fff"><circle cx="32" cy="23" r="1.6"/><circle cx="27" cy="31" r="1.6"/><circle cx="37" cy="31" r="1.6"/></g>' +
+          '<text x="32" y="58" text-anchor="middle" font-size="8" font-weight="800" fill="#f0c96b" font-family="sans-serif">ARK</text>';
+    } else if (id === 'marshal') {
+      a = '<circle cx="32" cy="32" r="24" fill="#c0c4cc" stroke="#7a7f88" stroke-width="2"/>' +
+          '<path d="M32 13 L37 27 L52 27 L40 36 L45 51 L32 42 L19 51 L24 36 L12 27 L27 27 Z" fill="#8a8f98" stroke="#4d525a"/>';
+    } else if (id === 'court') {
+      a = '<line x1="32" y1="10" x2="32" y2="52" stroke="#d9a84a" stroke-width="3"/><line x1="14" y1="18" x2="50" y2="18" stroke="#d9a84a" stroke-width="3"/>' +
+          '<path d="M14 18 L8 34 H20 Z M50 18 L44 34 H56 Z" fill="none" stroke="#d9a84a" stroke-width="2"/>' +
+          '<path d="M7 34 a7 5 0 0 0 14 0 Z M43 34 a7 5 0 0 0 14 0 Z" fill="#d9a84a"/><rect x="22" y="52" width="20" height="4" fill="#d9a84a"/>';
+    } else {
+      a = '<circle cx="32" cy="12" r="5" fill="none" stroke="#9ec3e6" stroke-width="3"/><line x1="32" y1="17" x2="32" y2="54" stroke="#9ec3e6" stroke-width="4"/>' +
+          '<line x1="22" y1="24" x2="42" y2="24" stroke="#9ec3e6" stroke-width="4"/><path d="M12 38 C14 52 26 56 32 56 C38 56 50 52 52 38" fill="none" stroke="#9ec3e6" stroke-width="4"/>' +
+          '<path d="M8 40 L14 34 L17 42 Z M56 40 L50 34 L47 42 Z" fill="#9ec3e6"/>';
+    }
+    return '<svg viewBox="0 0 64 64" aria-hidden="true">' + a + '</svg>';
+  }
+
+  // ---------------------------------------------------------------
+  // Lock panel
+  // ---------------------------------------------------------------
+  function bigLock(open) {
+    return '<svg class="big-lock' + (open ? ' open' : '') + '" id="big-lock" width="40" height="46" viewBox="0 0 40 46" aria-hidden="true">' +
+      '<path class="shackle" d="M11 20 V12 a9 9 0 0 1 18 0 V20" fill="none" stroke="#c9ccd2" stroke-width="4.5"/>' +
+      '<rect class="lbody" x="5" y="18" width="30" height="25" rx="5" fill="#d9a84a"/>' +
+      '<circle cx="20" cy="28" r="3" fill="#3a2a18"/><rect x="18.8" y="29" width="2.4" height="7" fill="#3a2a18"/></svg>';
+  }
+
+  function docHtml(L) {
+    var h = '<div class="doc"><div class="doc-tag">' + L.tag + '</div>';
+    if (L.title) h += '<div class="title-line">' + L.title + '</div>';
+    h += '<q>' + L.quote + '</q>';
+    if (L.summary) h += '<div class="summary"><span class="lbl">Document summary (paraphrase, not a quotation)</span>' + L.summary + '</div>';
+    h += '<div class="cite">' + L.cite + '</div>';
+    h += '<span class="stamp">ARCHIVE</span></div>';
+    return h;
+  }
+
+  function wheelHtml(i, prev, cur, next, label) {
+    return '<div class="wheel">' +
+      '<button class="wbtn" data-act="up" data-i="' + i + '" aria-label="' + label + ' ' + (i + 1) + ' up">▲</button>' +
+      '<div class="wwin" data-i="' + i + '" id="win-' + i + '"><span class="wp">' + prev + '</span><span class="wc">' + cur + '</span><span class="wn">' + next + '</span></div>' +
+      '<button class="wbtn" data-act="down" data-i="' + i + '" aria-label="' + label + ' ' + (i + 1) + ' down">▼</button></div>';
+  }
+
+  function mechHtml(L, st) {
+    var h = '', i;
+    if (L.kind === 'digits') {
+      h += '<div class="wheels">';
+      for (i = 0; i < 4; i++) {
+        var d = st.input[i];
+        h += wheelHtml(i, (d + 9) % 10, d, (d + 1) % 10, 'Digit');
+      }
+      h += '</div><div class="mech-note">Tap ▲ ▼ or swipe a wheel</div>';
+    } else if (L.kind === 'letters') {
+      h += '<div class="wheels">';
+      for (i = 0; i < 7; i++) {
+        var set = WHEEL_LETTERS[i], k = st.input[i], n = set.length;
+        h += wheelHtml(i, set.charAt((k + n - 1) % n), set.charAt(k), set.charAt((k + 1) % n), 'Letter');
+      }
+      h += '</div><div class="mech-note">Each wheel has only a few letters, like a real word lock</div>';
+    } else if (L.kind === 'choice') {
+      h += '<div class="choices">';
+      for (i = 0; i < CHOICES.length; i++) {
+        var c = CHOICES[i];
+        h += '<button class="choice' + (st.input === c.id ? ' sel' : '') + '" data-act="pick" data-id="' + c.id + '" aria-pressed="' + (st.input === c.id) + '">' + insignia(c.id) + '<span>' + c.label + '</span></button>';
+      }
+      h += '</div>';
+    } else {
+      h += '<div class="orders">';
+      for (i = 0; i < EVENTS.length; i++) {
+        var e = EVENTS[i], pos = st.input.indexOf(e.id);
+        h += '<button class="ord' + (pos >= 0 ? ' picked' : '') + '" data-act="ord" data-id="' + e.id + '"><span class="badge">' + (pos >= 0 ? (pos + 1) : '') + '</span><span>' + e.text + '</span></button>';
+      }
+      h += '</div><div class="mech-note">Tap the oldest first. Tap a numbered card again to take it back.</div>';
+    }
+    return h;
+  }
+
+  function currentValue(L, st) {
+    var i;
+    if (L.kind === 'digits') return st.input.join('');
+    if (L.kind === 'letters') {
+      var w = '';
+      for (i = 0; i < 7; i++) w += WHEEL_LETTERS[i].charAt(st.input[i]);
+      return w;
+    }
+    if (L.kind === 'choice') return st.input;
+    return st.input.length === EVENTS.length ? st.input.join(',') : null;
+  }
+
+  function displayValue(L, v) {
+    if (v === null || v === undefined) return '';
+    if (L.kind === 'choice') {
+      for (var i = 0; i < CHOICES.length; i++) if (CHOICES[i].id === v) return CHOICES[i].label;
+    }
+    return v;
+  }
+
+  function renderPanel() {
+    var L = LOCK_BY_ID[S.current], st = S.locks[L.id];
+    var h = '<div class="lock-head">' + bigLock(st.open) + '<div><div class="sub">Lock ' + L.num + ' of 4</div><h2>' + L.name + '</h2></div></div>';
+    h += docHtml(L);
+    h += '<div class="clue"><span class="lbl">Clue</span>' + L.clue + '</div>';
+    h += '<div class="mech' + (st.open ? ' unlocked' : '') + '" id="mech">' + mechHtml(L, st) + '</div>';
+    if (st.open) {
+      h += '<div class="open-banner">✓ Unlocked with <b>' + displayValue(L, st.entry) + '</b> · +' + lockPoints(L.id) + ' points' + (st.hint ? ' (hint used)' : '') + '</div>';
+    } else {
+      var ready = currentValue(L, st) !== null;
+      h += '<div class="actions"><button class="btn btn-primary" data-act="try"' + (ready ? '' : ' disabled') + '>Try to open</button>';
+      if (hintsOn && !st.hint) h += '<button class="btn btn-hint" data-act="hint" id="hint-btn">Hint (−' + HINT_COST + ' points)</button>';
+      h += '</div><div class="feedback" id="feedback"></div>';
+    }
+    if (st.hint) h += '<div class="hint-box"><b>Hint:</b> ' + L.hint + '</div>';
+    h += '<div class="footer-row"><span>Wrong tries are recorded for your teacher but cost no points.</span>';
+    if (!S.finished) h += '<button class="btn btn-ghost" data-act="leave" id="leave-btn">Leave &amp; submit now</button>';
+    h += '</div>';
+    if (mode === 'live' && !S.finished) h += '<div style="text-align:right;margin-top:8px"><button class="btn btn-ghost" data-act="reset" id="reset-btn">Start over</button></div>';
+    $('panel').innerHTML = h;
+    hintArmed = false; leaveArmed = false; resetArmed = false;
+    bindWheelSwipes();
+  }
+
+  function renderAll() {
+    renderChips();
+    renderScene();
+    renderPanel();
+    renderTimer();
+  }
+
+  function selectLock(id) {
+    if (!S || !S.started || S.finished || !LOCK_BY_ID[id]) return;
+    if (S.current === id) return;
+    S.current = id;
+    renderChips();
+    renderScene();
+    renderPanel();
+    $('panel').scrollTop = 0;
+    save();
+  }
+
+  function refreshMech() {
+    var L = LOCK_BY_ID[S.current], st = S.locks[L.id];
+    $('mech').innerHTML = mechHtml(L, st);
+    var btn = document.querySelector('[data-act="try"]');
+    if (btn) btn.disabled = currentValue(L, st) === null;
+    bindWheelSwipes();
+  }
+
+  function stepWheel(i, dir) {
+    var L = LOCK_BY_ID[S.current], st = S.locks[L.id];
+    if (st.open || S.finished) return;
+    var n = L.kind === 'digits' ? 10 : WHEEL_LETTERS[i].length;
+    st.input[i] = (st.input[i] + dir + n) % n;
+    var win = $('win-' + i);
+    var spans = win.getElementsByTagName('span');
+    var k = st.input[i];
+    if (L.kind === 'digits') {
+      spans[0].textContent = (k + 9) % 10; spans[1].textContent = k; spans[2].textContent = (k + 1) % 10;
+    } else {
+      var set = WHEEL_LETTERS[i];
+      spans[0].textContent = set.charAt((k + n - 1) % n); spans[1].textContent = set.charAt(k); spans[2].textContent = set.charAt((k + 1) % n);
+    }
+    win.classList.remove('roll'); win.classList.remove('rolld');
+    void win.offsetWidth;
+    win.classList.add(dir > 0 ? 'roll' : 'rolld');
+    clearFeedback();
+    save();
+  }
+
+  function bindWheelSwipes() {
+    var wins = document.querySelectorAll('.wwin');
+    for (var i = 0; i < wins.length; i++) {
+      (function(win) {
+        var y0 = null;
+        win.addEventListener('pointerdown', function(e) { y0 = e.clientY; try { win.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } });
+        win.addEventListener('pointerup', function(e) {
+          if (y0 === null) return;
+          var dy = e.clientY - y0; y0 = null;
+          var idx = parseInt(win.getAttribute('data-i'), 10);
+          if (Math.abs(dy) < 12) stepWheel(idx, 1);
+          else stepWheel(idx, dy < 0 ? 1 : -1);
+        });
+        win.addEventListener('pointercancel', function() { y0 = null; });
+      })(wins[i]);
+    }
+  }
+
+  function clearFeedback() {
+    var f = $('feedback');
+    if (f) { f.textContent = ''; f.className = 'feedback'; }
+  }
+
+  function tryOpen() {
+    var L = LOCK_BY_ID[S.current], st = S.locks[L.id];
+    if (st.open || S.finished) return;
+    var v = currentValue(L, st);
+    if (v === null) return;
+    var f = $('feedback');
+    if (fingerprint(L.id + ':' + v) === CHECK[L.id]) {
+      st.open = true;
+      st.entry = v;
+      st.openedAt = S.elapsed;
+      var mech = $('mech');
+      mech.classList.add('unlocked');
+      var bl = $('big-lock');
+      if (bl) bl.setAttribute('class', 'big-lock open');
+      if (f) { f.className = 'feedback good'; f.textContent = '*click* The padlock springs open!'; }
+      renderScene();
+      renderChips();
+      save();
+      setTimeout(function() {
+        if (S.finished) return;
+        renderPanel();
+        if (openCount() === LOCKS.length) escape();
+      }, 900);
+    } else {
+      if (st.wrong.length < 60) st.wrong.push({ value: displayValue(L, v), at: S.elapsed });
+      var m = $('mech');
+      m.classList.remove('shake'); void m.offsetWidth; m.classList.add('shake');
+      var pl = $('pl-' + L.id);
+      if (pl) { pl.classList.remove('shake'); void pl.getBoundingClientRect(); pl.classList.add('shake'); setTimeout(function() { pl.classList.remove('shake'); }, 500); }
+      if (f) {
+        f.className = 'feedback bad';
+        f.textContent = 'Clunk. The lock holds. Read the document again. (Try ' + st.wrong.length + ', no points lost.)';
+      }
+      renderChips();
+      save();
+    }
+  }
+
+  function useHint() {
+    var st = S.locks[S.current];
+    var b = $('hint-btn');
+    if (!hintArmed) {
+      hintArmed = true;
+      b.classList.add('arm');
+      b.textContent = 'Tap again: this lock will be worth ' + (POINTS - HINT_COST);
+      clearTimeout(hintArmTimer);
+      hintArmTimer = setTimeout(function() {
+        hintArmed = false;
+        var bb = $('hint-btn');
+        if (bb) { bb.classList.remove('arm'); bb.textContent = 'Hint (−' + HINT_COST + ' points)'; }
+      }, 4000);
+      return;
+    }
+    hintArmed = false;
+    st.hint = true;
+    renderPanel();
+    save();
+  }
+
+  function onPanelClick(e) {
+    var t = e.target;
+    while (t && t !== this && !t.getAttribute('data-act')) t = t.parentNode;
+    if (!t || t === this || !S || !S.started) return;
+    var act = t.getAttribute('data-act');
+    var L = LOCK_BY_ID[S.current], st = S.locks[L.id];
+    if (act === 'up' || act === 'down') {
+      stepWheel(parseInt(t.getAttribute('data-i'), 10), act === 'up' ? 1 : -1);
+    } else if (act === 'pick') {
+      if (st.open || S.finished) return;
+      st.input = t.getAttribute('data-id');
+      clearFeedback();
+      refreshMech();
+      save();
+    } else if (act === 'ord') {
+      if (st.open || S.finished) return;
+      var id = t.getAttribute('data-id');
+      var pos = st.input.indexOf(id);
+      if (pos >= 0) st.input.splice(pos, 1); else st.input.push(id);
+      clearFeedback();
+      refreshMech();
+      save();
+    } else if (act === 'try') {
+      tryOpen();
+    } else if (act === 'hint') {
+      useHint();
+    } else if (act === 'leave') {
+      if (!leaveArmed) {
+        leaveArmed = true;
+        t.classList.add('arm');
+        t.textContent = 'Tap again to submit ' + totalScore() + '/' + MAX_SCORE;
+        clearTimeout(leaveArmTimer);
+        leaveArmTimer = setTimeout(function() {
+          leaveArmed = false;
+          var b = $('leave-btn');
+          if (b) { b.classList.remove('arm'); b.innerHTML = 'Leave &amp; submit now'; }
+        }, 4000);
+        return;
+      }
+      leaveArmed = false;
+      finish(false);
+    } else if (act === 'reset') {
+      if (!resetArmed) {
+        resetArmed = true;
+        t.classList.add('arm');
+        t.textContent = 'Tap again to clear everything';
+        clearTimeout(resetArmTimer);
+        resetArmTimer = setTimeout(function() {
+          resetArmed = false;
+          var b = $('reset-btn');
+          if (b) { b.classList.remove('arm'); b.textContent = 'Start over'; }
+        }, 4000);
+        return;
+      }
+      resetArmed = false;
+      S = freshState();
+      try { Zest.clearState(); } catch (err) { /* ignore */ }
+      stopTick();
+      renderAll();
+      showIntro();
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Timer
+  // ---------------------------------------------------------------
+  function limitMs() { return timeLimitMin > 0 ? timeLimitMin * 60000 : 0; }
+
+  function renderTimer() {
+    if (!S) return;
+    var lim = limitMs();
+    var pill = $('timer');
+    if (lim) {
+      var left = lim - S.elapsed;
+      $('timer-k').textContent = 'Left';
+      $('timer-v').textContent = fmt(left);
+      if (left < 60000) pill.classList.add('warn'); else pill.classList.remove('warn');
+    } else {
+      $('timer-k').textContent = 'Time';
+      $('timer-v').textContent = fmt(S.elapsed);
+      pill.classList.remove('warn');
+    }
+  }
+
+  function startTick() {
+    stopTick();
+    lastTick = Date.now();
+    sinceSave = 0;
+    tickTimer = setInterval(function() {
+      var now = Date.now();
+      var d = now - lastTick;
+      lastTick = now;
+      if (d > 5000) d = 1000;   // the tab slept; do not charge that time
+      if (!S || !S.started || S.finished) return;
+      S.elapsed += d;
+      var st = S.locks[S.current];
+      if (st && !st.open) st.active += d;
+      renderTimer();
+      sinceSave += d;
+      if (sinceSave >= 15000) { sinceSave = 0; save(); }
+      var lim = limitMs();
+      if (lim && S.elapsed >= lim) {
+        S.elapsed = lim;
+        S.timedOut = true;
+        finish(false);
+      }
+    }, 1000);
+  }
+
+  function stopTick() {
+    if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+  }
+
+  // ---------------------------------------------------------------
+  // Intro, finish, result
+  // ---------------------------------------------------------------
+  function showIntro() {
+    var r = '';
+    r += '<li><span class="ri">4</span><span>Four padlocks, four documents. Each lock is a different kind: a year dial, a word lock, an insignia lock and a timeline lock.</span></li>';
+    r += '<li><span class="ri">25</span><span>Each lock you open is worth ' + POINTS + ' points (' + MAX_SCORE + ' in all).</span></li>';
+    if (hintsOn) r += '<li><span class="ri">?</span><span>Each lock has one hint. Using it costs ' + HINT_COST + ' points on that lock.</span></li>';
+    else r += '<li><span class="ri">?</span><span>Hints are turned off for this assignment.</span></li>';
+    r += '<li><span class="ri">✕</span><span>Wrong tries cost nothing, but your teacher can see them.</span></li>';
+    if (timeLimitMin > 0) r += '<li><span class="ri">⏱</span><span>You have ' + timeLimitMin + ' minute' + (timeLimitMin === 1 ? '' : 's') + '. When time runs out, the locks you opened are submitted.</span></li>';
+    else r += '<li><span class="ri">⏱</span><span>No time limit, but the clock is running.</span></li>';
+    $('rules').innerHTML = r;
+    $('intro').classList.add('visible');
+    $('result').classList.remove('visible');
+  }
+
+  function startGame() {
+    $('intro').classList.remove('visible');
+    S.started = true;
+    renderAll();
+    startTick();
+    save();
+  }
+
+  function escape() {
+    S.escaped = true;
+    renderScene();
+    setTimeout(function() { finish(true); }, 1500);
+  }
+
+  function finish(escaped) {
+    if (S.finished) return;
+    S.finished = true;
+    S.escaped = !!escaped || openCount() === LOCKS.length;
+    S.finishedAt = new Date().toISOString();
+    stopTick();
+    renderAll();
+    save();
+    showResult();
+    if (mode === 'live') submitScore();
+  }
+
+  function buildArtifacts() {
+    var locks = [];
+    for (var i = 0; i < LOCKS.length; i++) {
+      var L = LOCKS[i], st = S.locks[L.id];
+      locks.push({
+        id: L.id, num: L.num, name: L.name, kind: L.kind,
+        opened: st.open,
+        entry: st.open ? displayValue(L, st.entry) : null,
+        lastSetting: st.open ? null : (currentValue(L, st) === null ? null : displayValue(L, currentValue(L, st))),
+        wrongTries: st.wrong.slice(0),
+        hintUsed: st.hint,
+        openedAtMs: st.openedAt,
+        activeMs: st.active,
+        points: lockPoints(L.id)
+      });
+    }
+    return {
+      activity: 'escape-the-archive', version: '1.0.0',
+      settings: { hints: hintsOn, timeLimitMinutes: timeLimitMin, pointsPerLock: POINTS, hintCost: HINT_COST },
+      locks: locks,
+      score: totalScore(), maxScore: MAX_SCORE,
+      locksOpened: openCount(),
+      hintsUsed: countHints(),
+      wrongTries: countWrong(),
+      elapsedMs: S.elapsed,
+      escaped: S.escaped, timedOut: S.timedOut,
+      completedAt: S.finishedAt
+    };
+  }
+
+  function countHints() { var n = 0; for (var i = 0; i < LOCKS.length; i++) if (S.locks[LOCKS[i].id].hint) n++; return n; }
+  function countWrong() { var n = 0; for (var i = 0; i < LOCKS.length; i++) n += S.locks[LOCKS[i].id].wrong.length; return n; }
+
+  function submitScore() {
+    if (mode !== 'live' || submitting || S.submitted) return;
+    submitting = true;
+    submitMsg = { cls: 'info', text: 'Sending your score to the gradebook…' };
+    showResult();
+    var score = totalScore();
+    Zest.submitScore(score, {
+      maxScore: MAX_SCORE,
+      artifacts: buildArtifacts(),
+      comment: 'Escape the Archive: ' + openCount() + '/4 locks, ' + score + '/' + MAX_SCORE + (countHints() ? ', ' + countHints() + ' hint(s)' : '')
+    }).then(function(res) {
+      submitting = false;
+      if (res && res.success) {
+        S.submitted = true;
+        S.agsStatus = res.agsStatus || null;
+        submitMsg = submitStatusMsg(S.agsStatus);
+      } else {
+        submitMsg = { cls: 'err', text: 'Your score was not sent' + (res && res.error ? ' (' + res.error + ')' : '') + '. Check your connection and try again.', retry: true };
+      }
+      save();
+      showResult();
+    }).catch(function(err) {
+      submitting = false;
+      submitMsg = { cls: 'err', text: 'Your score was not sent (network problem). Try again.', retry: true };
+      save();
+      showResult();
+    });
+  }
+
+  function submitStatusMsg(ags) {
+    if (ags === 'failed') return { cls: 'warn', text: 'Your work is saved. Canvas has not accepted the grade yet; it will appear in the gradebook shortly. You do not need to submit again.' };
+    if (ags === 'skipped') return { cls: 'ok', text: 'Your work is saved. (This placement has no gradebook column.)' };
+    return { cls: 'ok', text: 'Submitted! Your score is in the gradebook.' };
+  }
+
+  function showResult() {
+    var escaped = S.escaped, score = totalScore();
+    var h = '';
+    h += '<svg width="64" height="64" viewBox="0 0 40 46" aria-hidden="true" style="margin:0 auto 4px;display:block">' +
+      '<path d="M11 20 V12 a9 9 0 0 1 18 0 V20" fill="none" stroke="#c9ccd2" stroke-width="4.5" ' + (escaped ? 'transform="translate(0,-6) rotate(-28 29 20)"' : '') + '/>' +
+      '<rect x="5" y="18" width="30" height="25" rx="5" fill="' + (escaped ? '#2f9a67' : '#d9a84a') + '"/></svg>';
+    if (escaped) h += '<h2>You escaped the archive!</h2>';
+    else if (S.timedOut) h += '<h2>Time’s up!</h2>';
+    else h += '<h2>You left the archive</h2>';
+    h += '<div class="score-big">' + score + '<small> / ' + MAX_SCORE + '</small></div>';
+    h += '<div style="color:var(--mute);font-size:13px">' + openCount() + ' of 4 locks · ' + countWrong() + ' wrong tr' + (countWrong() === 1 ? 'y' : 'ies') + ' · ' + countHints() + ' hint' + (countHints() === 1 ? '' : 's') + ' · ' + fmt(S.elapsed) + '</div>';
+    h += '<table class="bd"><tr><th>Lock</th><th>Status</th><th style="text-align:right">Points</th></tr>';
+    for (var i = 0; i < LOCKS.length; i++) {
+      var L = LOCKS[i], st = S.locks[L.id];
+      h += '<tr><td>' + L.num + '. ' + L.name + '</td><td>' + (st.open ? '<span class="y">✓ Open</span>' : '<span class="x">✕ Locked</span>') +
+        (st.hint ? ' · hint −' + HINT_COST : '') + '</td><td class="n">' + lockPoints(L.id) + '</td></tr>';
+    }
+    h += '</table>';
+    if (mode === 'preview') {
+      h += '<div class="status warn">Preview: this score was <b>not submitted</b>. Inside Canvas it goes straight to the gradebook, and the teacher sees every try in SpeedGrader.</div>';
+      h += '<button class="btn btn-brass" id="again-btn" style="width:100%">Play again</button>';
+    } else if (S.submitted) {
+      var msg = submitMsg || submitStatusMsg(S.agsStatus);
+      h += '<div class="status ' + msg.cls + '">' + msg.text + '</div>';
+    } else if (submitMsg) {
+      h += '<div class="status ' + submitMsg.cls + '">' + submitMsg.text + '</div>';
+      if (submitMsg.retry) h += '<button class="btn btn-primary" id="retry-btn" style="width:100%">Retry submit</button>';
+    } else {
+      h += '<button class="btn btn-primary" id="retry-btn" style="width:100%">Submit score</button>';
+    }
+    $('result-card').innerHTML = h;
+    $('result').classList.add('visible');
+    var again = $('again-btn');
+    if (again) again.addEventListener('click', function() {
+      S = freshState();
+      submitMsg = null;
+      renderAll();
+      showIntro();
+    });
+    var retry = $('retry-btn');
+    if (retry) retry.addEventListener('click', function() { submitScore(); });
+  }
+
+  function toast(text) {
+    var t = $('toast');
+    t.textContent = text;
+    t.classList.add('visible');
+    setTimeout(function() { t.classList.remove('visible'); }, 4000);
+  }
+
+  // ---------------------------------------------------------------
+  // Boot: live (inside Canvas) or preview (no Zest context)
+  // ---------------------------------------------------------------
+  function validState(st) {
+    if (!st || typeof st !== 'object' || st.v !== 1 || !st.locks) return false;
+    for (var i = 0; i < LOCKS.length; i++) if (!st.locks[LOCKS[i].id]) return false;
+    return !!LOCK_BY_ID[st.current];
+  }
+
+  function resetUi() {
+    stopTick();
+    submitting = false;
+    submitMsg = null;
+    $('intro').classList.remove('visible');
+    $('result').classList.remove('visible');
+  }
+
+  function startPreview() {
+    if (mode !== 'pending') return;
+    mode = 'preview';
+    hintsOn = true;
+    timeLimitMin = 0;
+    $('preview-banner').classList.add('visible');
+    S = freshState();
+    renderAll();
+    showIntro();
+  }
+
+  function readBool(v, d) {
+    if (v === true || v === false) return v;
+    if (v === 'true') return true;
+    if (v === 'false') return false;
+    return d;
+  }
+
+  function startLive() {
+    var wasPreview = mode === 'preview';
+    mode = 'live';
+    resetUi();
+    $('preview-banner').classList.remove('visible');
+    hintsOn = readBool(Zest.getParameter('hints', true), true);
+    timeLimitMin = parseFloat(Zest.getParameter('timeLimit', 0)) || 0;
+    if (timeLimitMin < 0) timeLimitMin = 0;
+    S = freshState();
+    renderAll();
+    $('sync').classList.add('visible');
+    Zest.onSyncStatus(function(status) {
+      $('sync-dot').className = 'sync-dot ' + status;
+      var labels = { synced: 'Saved', dirty: 'Saving soon', syncing: 'Saving…', error: 'Save failed', expired: 'Reopen from Canvas to keep saving' };
+      $('sync-text').textContent = labels[status] || status;
+    });
+    Zest.loadState().then(function(saved) {
+      if (mode !== 'live') return;
+      if (validState(saved) && saved.started) {
+        S = saved;
+        renderAll();
+        if (S.finished) {
+          showResult();
+        } else {
+          startTick();
+          toast('Your previous progress has been restored.');
+        }
+      } else {
+        showIntro();
+      }
+    }, function() {
+      showIntro();
+    });
+    if (wasPreview) toast('Connected to Canvas. Your work now saves and counts.');
+  }
+
+  // Wire static UI
+  buildShelf($('shelfL'), 18, 150);
+  buildShelf($('shelfR'), 330, 462);
+  buildPadlocks();
+  $('panel').addEventListener('click', onPanelClick);
+  $('chips').addEventListener('click', function(e) {
+    var t = e.target;
+    while (t && t !== this && !t.getAttribute('data-lock')) t = t.parentNode;
+    if (t && t !== this) selectLock(t.getAttribute('data-lock'));
+  });
+  $('start-btn').addEventListener('click', startGame);
+
+  if (typeof Zest === 'undefined') {
+    startPreview();
+    return;
+  }
+  var previewTimer = setTimeout(function() {
+    if (!readyFired && !(Zest.isReady && Zest.isReady())) startPreview();
+  }, 1200);
+  Zest.onReady(function(ctx) {
+    if (readyFired) return;
+    readyFired = true;
+    clearTimeout(previewTimer);
+    startLive();
+  });
+})();
+</script>
+</body>
+</html>

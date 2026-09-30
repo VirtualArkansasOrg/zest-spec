@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review: Launch Lab</title>
+  <script src="/public/zest-bridge.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #eef2f6; color: #1f2d3a; padding: 16px;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    .card { background: #fff; border-radius: 12px; padding: 16px 20px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .sample { background: #fff8e6; color: #7a5a00; border: 1px dashed #e0c375; border-radius: 10px; padding: 8px 14px; font-size: 13px; margin-bottom: 12px; display: none; }
+    .sample.on { display: block; }
+    .top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .top h1 { font-size: 13px; color: #0770A2; text-transform: uppercase; letter-spacing: 0.7px; }
+    .who { font-size: 20px; font-weight: 700; color: #0b3954; margin-top: 2px; }
+    .when { font-size: 12.5px; color: #6b7c8c; margin-top: 2px; }
+    .score { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .score-num { font-size: 30px; font-weight: 800; color: #0b3954; }
+    .score-num small { font-size: 15px; color: #6b7c8c; font-weight: 600; }
+    .score-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: #6b7c8c; }
+    .settings { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .set { background: #f0f5f9; color: #3b4d5e; border-radius: 999px; padding: 4px 11px; font-size: 12px; }
+    .set b { color: #0b3954; }
+    h2 { font-size: 15px; color: #394b58; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .legend { display: flex; gap: 14px; font-size: 12px; color: #56687a; font-weight: 400; margin-left: auto; flex-wrap: wrap; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .sw { width: 22px; height: 0; border-top: 3px solid; display: inline-block; }
+    .field svg { width: 100%; height: auto; display: block; border-radius: 10px; }
+    .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .tbl th { text-align: left; background: #f0f7fb; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: #4b5b6a; border-bottom: 2px solid #d6eaf4; }
+    .tbl td { padding: 8px 10px; border-bottom: 1px solid #eef2f6; vertical-align: top; }
+    .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .pill.hit { background: #e3f6ec; color: #1c7a46; }
+    .pill.miss { background: #fdeee4; color: #b3590b; }
+    .prac { color: #7b8a98; font-size: 12px; line-height: 1.5; }
+    .prac .h { color: #1c7a46; }
+    .muted { color: #8a99a8; }
+    .note { font-size: 12px; color: #6b7c8c; margin-top: 8px; line-height: 1.45; }
+    .msg { padding: 30px; text-align: center; color: #56687a; }
+    .tbl-wrap { overflow-x: auto; }
+    @media (max-width: 640px) {
+      body { padding: 10px; }
+      .card { padding: 14px; }
+      .score { margin-left: 0; }
+      .tbl .opt { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="sample" id="sample">Sample submission (preview). In SpeedGrader this page shows the selected student's real rounds.</div>
+    <div id="review-content"><div class="card msg">Loading submission&hellip;</div></div>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var G = 9.8;
+    var HIT = '#1c9656', MISS = '#e0602a', GREY = '#8d9aa6';
+
+    function esc(s) { var d = document.createElement('div'); d.textContent = String(s === null || s === undefined ? '' : s); return d.innerHTML; }
+    function num(x, dflt) { var n = parseFloat(x); return isFinite(n) ? n : dflt; }
+    function f1(x) { return (Math.round(x * 10) / 10).toFixed(1); }
+    function signed(x) { return (x >= 0 ? '+' : '−') + f1(Math.abs(x)); }
+    function rad(d) { return d * Math.PI / 180; }
+    function rangeOf(v, deg) { return v * v * Math.sin(2 * rad(deg)) / G; }
+    function peakOf(v, deg) { var vy = v * Math.sin(rad(deg)); return vy * vy / (2 * G); }
+    function timeOf(v, deg) { return 2 * v * Math.sin(rad(deg)) / G; }
+
+    // ---------- sample submission for preview ----------
+    function sampleSubmission() {
+      var v = 20, tol = 1.5, targets = [18, 27, 36, 24, 33];
+      var preds = [13.5, 21, 35, 18, 62];
+      var practice = [[76.5], [], [33, 31, 59], [72], [28, 27.8]];
+      var rounds = [], hits = 0;
+      for (var i = 0; i < targets.length; i++) {
+        var L = Math.round(rangeOf(v, preds[i]) * 100) / 100, e = Math.round((L - targets[i]) * 100) / 100;
+        var hit = Math.abs(e) <= tol;
+        if (hit) hits++;
+        var pr = [];
+        for (var j = 0; j < practice[i].length; j++) {
+          var pl = Math.round(rangeOf(v, practice[i][j]) * 100) / 100;
+          pr.push({ angle: practice[i][j], landing: pl, error: Math.round((pl - targets[i]) * 100) / 100 });
+        }
+        rounds.push({ round: i + 1, target: targets[i], predictedAngle: preds[i], landing: L, error: e, hit: hit,
+          flightTime: Math.round(timeOf(v, preds[i]) * 100) / 100, maxHeight: Math.round(peakOf(v, preds[i]) * 100) / 100, practice: pr });
+      }
+      return {
+        score: hits, maxScore: targets.length,
+        comment: 'Launch Lab: hit ' + hits + ' of ' + targets.length + ' targets',
+        submittedAt: '2026-10-01T14:32:00.000Z', userName: 'Avery Student',
+        artifacts: {
+          activity: 'launch-lab', version: '1.0.0',
+          settings: { launchSpeed: v, tolerance: tol, g: G, targets: targets, showGuide: false },
+          rounds: rounds, hits: hits, total: targets.length, completedAt: '2026-10-01T14:32:00.000Z'
+        }
+      };
+    }
+
+    // ---------- field drawing ----------
+    function fieldSvg(rounds, v, tol) {
+      var W = 1000, H = 330, padL = 46, padR = 24, padT = 22, groundY = H - 44;
+      var maxR = v * v / G, maxX = maxR * 1.04, maxY = 1, i, j;
+      for (i = 0; i < rounds.length; i++) {
+        var r = rounds[i];
+        maxX = Math.max(maxX, (r.target || 0) + tol + 1);
+        if (typeof r.predictedAngle === 'number') maxY = Math.max(maxY, peakOf(v, r.predictedAngle));
+        var pr = r.practice || [];
+        for (j = 0; j < pr.length; j++) if (typeof pr[j].angle === 'number') maxY = Math.max(maxY, peakOf(v, pr[j].angle));
+      }
+      maxY = Math.ceil(maxY * 1.12 / 2) * 2;
+      var sx = (W - padL - padR) / maxX, sy = (groundY - padT) / maxY;
+      function X(m) { return (padL + m * sx).toFixed(1); }
+      function Y(m) { return (groundY - m * sy).toFixed(1); }
+      function path(deg) {
+        var a = rad(deg), vx = v * Math.cos(a), vy = v * Math.sin(a), T = timeOf(v, deg), d = '';
+        for (var k = 0; k <= 48; k++) {
+          var t = T * k / 48;
+          d += (k ? 'L' : 'M') + X(vx * t) + ' ' + Y(Math.max(0, vy * t - 0.5 * G * t * t));
+        }
+        return d;
+      }
+      var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Scored trajectories for every round">';
+      s += '<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dcebf8"/><stop offset="1" stop-color="#f7fbff"/></linearGradient>' +
+        '<linearGradient id="gnd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7cc25c"/><stop offset="1" stop-color="#4e9a3b"/></linearGradient></defs>';
+      s += '<rect x="0" y="0" width="' + W + '" height="' + groundY + '" fill="url(#sky)"/>';
+      s += '<rect x="0" y="' + groundY + '" width="' + W + '" height="' + (H - groundY) + '" fill="url(#gnd)"/>';
+      // y grid
+      var ystep = maxY > 16 ? 5 : 2;
+      for (var yv = ystep; yv <= maxY; yv += ystep) {
+        s += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + Y(yv) + '" y2="' + Y(yv) + '" stroke="#c9dbea" stroke-width="1"/>';
+        s += '<text x="' + (padL - 6) + '" y="' + (parseFloat(Y(yv)) + 4) + '" font-size="11" text-anchor="end" fill="#6b7c8c">' + yv + ' m</text>';
+      }
+      // ruler
+      for (var m = 0; m <= maxX; m++) {
+        var len = m % 10 === 0 ? 12 : (m % 5 === 0 ? 8 : 4);
+        s += '<line x1="' + X(m) + '" x2="' + X(m) + '" y1="' + groundY + '" y2="' + (groundY + len) + '" stroke="#fff" stroke-opacity="0.85" stroke-width="' + (m % 5 === 0 ? 1.4 : 1) + '"/>';
+        if (m % 5 === 0) s += '<text x="' + X(m) + '" y="' + (groundY + 26) + '" font-size="12" font-weight="600" text-anchor="middle" fill="#fff">' + m + (m === 5 ? ' m' : '') + '</text>';
+      }
+      // hit zones and flags
+      for (i = 0; i < rounds.length; i++) {
+        var t = rounds[i].target;
+        if (typeof t !== 'number') continue;
+        var col = rounds[i].hit ? HIT : MISS;
+        s += '<rect x="' + X(t - tol) + '" y="' + (groundY - 2) + '" width="' + (2 * tol * sx).toFixed(1) + '" height="6" fill="' + col + '" fill-opacity="0.35"/>';
+        s += '<line x1="' + X(t) + '" x2="' + X(t) + '" y1="' + groundY + '" y2="' + (groundY - 26) + '" stroke="#5b6b7a" stroke-width="1.5"/>';
+        s += '<path d="M' + X(t) + ' ' + (groundY - 26) + 'l14 4l-14 4z" fill="' + col + '"/>';
+      }
+      // practice arcs (greyed)
+      for (i = 0; i < rounds.length; i++) {
+        var p = rounds[i].practice || [];
+        for (j = 0; j < p.length; j++) {
+          if (typeof p[j].angle !== 'number') continue;
+          s += '<path d="' + path(p[j].angle) + '" fill="none" stroke="' + GREY + '" stroke-opacity="0.55" stroke-width="1.5" stroke-dasharray="4 4"/>';
+        }
+      }
+      // scored arcs
+      for (i = 0; i < rounds.length; i++) {
+        var rr = rounds[i];
+        if (typeof rr.predictedAngle !== 'number') continue;
+        var c = rr.hit ? HIT : MISS;
+        s += '<path d="' + path(rr.predictedAngle) + '" fill="none" stroke="' + c + '" stroke-width="3" stroke-linecap="round"/>';
+      }
+      // landing badges
+      for (i = 0; i < rounds.length; i++) {
+        var q = rounds[i];
+        if (typeof q.landing !== 'number') continue;
+        var lx = X(q.landing), ly = groundY - 13 - (i % 2) * 20;
+        s += '<line x1="' + lx + '" x2="' + lx + '" y1="' + groundY + '" y2="' + ly + '" stroke="' + (q.hit ? HIT : MISS) + '" stroke-width="1.5"/>';
+        s += '<circle cx="' + lx + '" cy="' + ly + '" r="9" fill="' + (q.hit ? HIT : MISS) + '" stroke="#fff" stroke-width="2"/>';
+        s += '<text x="' + lx + '" y="' + (ly + 4) + '" font-size="11" font-weight="700" text-anchor="middle" fill="#fff">' + (q.round || i + 1) + '</text>';
+      }
+      // launcher
+      s += '<path d="M' + (padL - 12) + ' ' + groundY + 'a12 12 0 0 1 24 0z" fill="#34495e"/>';
+      s += '</svg>';
+      return s;
+    }
+
+    function solutions(v, target) {
+      var k = target * G / (v * v);
+      if (k > 1) return null;
+      var a = 0.5 * Math.asin(k) * 180 / Math.PI;
+      return [a, 90 - a];
+    }
+
+    // ---------- render ----------
+    function render(sub, isSample) {
+      document.getElementById('sample').className = 'sample' + (isSample ? ' on' : '');
+      var a = sub.artifacts || {};
+      var st = a.settings || {};
+      var v = num(st.launchSpeed, 20), tol = num(st.tolerance, 1.5);
+      var settingsSource = a.settings ? 'as the student saw them' : 'package defaults (not recorded in this submission)';
+      var rounds = a.rounds || [];
+      var hits = 0, n = rounds.length, practiceTotal = 0, i;
+      for (i = 0; i < n; i++) { if (rounds[i].hit) hits++; practiceTotal += (rounds[i].practice || []).length; }
+      var score = typeof sub.score === 'number' ? sub.score : hits;
+      var max = typeof sub.maxScore === 'number' ? sub.maxScore : n;
+
+      var h = '';
+      h += '<div class="card"><div class="top"><div>' +
+        '<h1>Launch Lab &middot; Teacher review</h1>' +
+        '<div class="who">' + esc(sub.userName || 'Student') + '</div>' +
+        '<div class="when">' + (sub.submittedAt ? 'Submitted ' + esc(new Date(sub.submittedAt).toLocaleString()) : '') + '</div>' +
+        '</div><div class="score"><div><div class="score-lbl">Targets hit</div><div class="score-num">' + esc(score) + ' <small>/ ' + esc(max) + '</small></div></div>' +
+        ringSvg(max ? score / max : 0) + '</div></div>';
+      h += '<div class="settings">' +
+        '<span class="set">Launch speed <b>' + esc(v) + ' m/s</b></span>' +
+        '<span class="set">Hit zone <b>&plusmn;' + esc(tol) + ' m</b></span>' +
+        '<span class="set">g = <b>' + esc(num(st.g, G)) + ' m/s&sup2;</b></span>' +
+        '<span class="set">Targets <b>' + esc((st.targets || []).join(', ')) + ' m</b></span>' +
+        '<span class="set">Aiming guide <b>' + (st.showGuide ? 'on' : 'off') + '</b></span>' +
+        '<span class="set">Practice shots <b>' + practiceTotal + '</b></span>' +
+        '</div><p class="note">Settings shown ' + settingsSource + '.</p></div>';
+
+      h += '<div class="card field"><h2>Every scored launch <span class="legend">' +
+        '<span><i class="sw" style="border-color:' + HIT + '"></i>Hit</span>' +
+        '<span><i class="sw" style="border-color:' + MISS + '"></i>Miss</span>' +
+        '<span><i class="sw" style="border-color:' + GREY + ';border-top-style:dashed"></i>Practice (not scored)</span>' +
+        '<span>Flags = targets</span></span></h2>' + fieldSvg(rounds, v, tol) +
+        '<p class="note">Numbered markers show where each round&rsquo;s predicted (scored) launch landed. Heights are drawn at a larger scale than distances so every arc fits.</p></div>';
+
+      h += '<div class="card"><h2>Round by round</h2><div class="tbl-wrap"><table class="tbl"><tr>' +
+        '<th>#</th><th>Target</th><th>Predicted angle</th><th>Landed</th><th>Off by</th><th>Result</th><th class="opt">Angles that hit exactly</th><th class="opt">Practice shots (not scored)</th></tr>';
+      for (i = 0; i < n; i++) {
+        var r = rounds[i];
+        var sol = typeof r.target === 'number' ? solutions(v, r.target) : null;
+        var pr = r.practice || [], ps = '';
+        for (var j = 0; j < pr.length; j++) {
+          var ok = typeof pr[j].error === 'number' && Math.abs(pr[j].error) <= tol;
+          ps += '<span class="' + (ok ? 'h' : '') + '">' + f1(num(pr[j].angle, 0)) + '&deg; &rarr; ' + f1(num(pr[j].landing, 0)) + ' m' + (ok ? ' &#10003;' : '') + '</span>' + (j < pr.length - 1 ? '<br>' : '');
+        }
+        h += '<tr><td><b>' + esc(r.round || i + 1) + '</b></td>' +
+          '<td>' + (typeof r.target === 'number' ? f1(r.target) + ' m' : '&ndash;') + '</td>' +
+          '<td><b>' + (typeof r.predictedAngle === 'number' ? f1(r.predictedAngle) + '&deg;' : '&ndash;') + '</b></td>' +
+          '<td>' + (typeof r.landing === 'number' ? f1(r.landing) + ' m' : '&ndash;') + '</td>' +
+          '<td>' + (typeof r.error === 'number' ? signed(r.error) + ' m' : '&ndash;') + '</td>' +
+          '<td><span class="pill ' + (r.hit ? 'hit">HIT' : 'miss">MISS') + '</span></td>' +
+          '<td class="opt">' + (sol ? f1(sol[0]) + '&deg; or ' + f1(sol[1]) + '&deg;' : '<span class="muted">unreachable</span>') + '</td>' +
+          '<td class="opt prac">' + (ps || '<span class="muted">none</span>') + '</td></tr>';
+      }
+      h += '</table></div><p class="note">Exact angles come from R = v&sup2; sin(2&theta;) / g with the student&rsquo;s launch speed. Any angle whose landing is within the hit zone counts as a hit. Practice shots are shown for insight only; the grade is hits &divide; rounds.</p></div>';
+      document.getElementById('review-content').innerHTML = h;
+    }
+
+    function ringSvg(p) {
+      var C = 2 * Math.PI * 22;
+      return '<svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="22" fill="none" stroke="#e8eef3" stroke-width="7"/>' +
+        '<circle cx="28" cy="28" r="22" fill="none" stroke="' + (p >= 0.6 ? HIT : MISS) + '" stroke-width="7" stroke-linecap="round" stroke-dasharray="' +
+        (C * p).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90 28 28)"/></svg>';
+    }
+
+    function message(t) {
+      document.getElementById('sample').className = 'sample';
+      document.getElementById('review-content').innerHTML = '<div class="card msg">' + esc(t) + '</div>';
+    }
+
+    // ---------- start-up ----------
+    var gotContext = false;
+    var sampleTimer = setTimeout(function () {
+      if (!gotContext) render(sampleSubmission(), true);
+    }, 1200);
+
+    Zest.onReady(function () {
+      gotContext = true;
+      clearTimeout(sampleTimer);
+      if (!Zest.isReviewMode()) { message('This page is only available in SpeedGrader review mode.'); return; }
+      var sub = Zest.getSubmission();
+      if (!sub) { message('No submission yet for this student.'); return; }
+      if (!sub.artifacts || !sub.artifacts.rounds) {
+        message('This submission has no round data. Score: ' + (sub.score === null || sub.score === undefined ? 'none' : sub.score + ' / ' + sub.maxScore));
+        return;
+      }
+      render(sub, false);
+    });
+  })();
+  </script>
+</body>
+</html>

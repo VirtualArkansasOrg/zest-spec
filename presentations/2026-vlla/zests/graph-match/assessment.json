@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "title": "Graph Match: Transformations",
+  "tolerance": 0.1,
+  "maxChecks": 3,
+  "allowHints": true,
+  "showEquation": true,
+  "challenges": [
+    { "parent": "quadratic", "a": 1, "h": 3, "k": -2, "unlocked": ["h", "k"] },
+    { "parent": "abs", "a": 2, "h": -1, "k": -3, "unlocked": ["a", "h", "k"] },
+    { "parent": "sqrt", "a": -2, "h": -4, "k": 3, "unlocked": ["a", "h", "k"] },
+    { "parent": "cubic", "a": 0.5, "h": 1, "k": -2, "unlocked": ["a", "h", "k"] },
+    { "parent": "sine", "a": -2, "h": 1, "k": 1, "unlocked": ["a", "h", "k"] }
+  ]
+}

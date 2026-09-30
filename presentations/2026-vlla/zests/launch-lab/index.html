@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Launch Lab: Projectile Motion</title>
+  <script src="/public/zest-bridge.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #eef2f6;
+      color: #1f2d3a;
+      overflow: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+    button { font-family: inherit; }
+    .app { display: flex; flex-direction: column; height: 100%; position: relative; }
+
+    /* ---------- header ---------- */
+    .hdr {
+      flex: 0 0 auto; display: flex; align-items: center; gap: 12px;
+      padding: 8px 16px; background: #fff; border-bottom: 1px solid #dde3ea; min-height: 52px;
+    }
+    .brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    .brand svg { flex: 0 0 auto; }
+    .brand-text { min-width: 0; }
+    .brand h1 { font-size: 17px; line-height: 1.1; color: #0b3954; letter-spacing: -0.2px; white-space: nowrap; }
+    .brand small { display: block; font-size: 11px; color: #6b7c8c; white-space: nowrap; }
+    .chips { display: flex; gap: 5px; margin-left: auto; align-items: center; }
+    .chip {
+      width: 24px; height: 24px; border-radius: 50%; font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      background: #eef2f6; color: #8a99a8; border: 2px solid #eef2f6;
+    }
+    .chip.cur { border-color: #0770A2; color: #0770A2; background: #fff; }
+    .chip.hit { background: #22a660; border-color: #22a660; color: #fff; }
+    .chip.miss { background: #f08a4b; border-color: #f08a4b; color: #fff; }
+    .scorebox { font-size: 12px; color: #4b5b6a; white-space: nowrap; font-weight: 600; }
+    .scorebox b { color: #0770A2; font-size: 15px; }
+    .sync { display: none; align-items: center; gap: 5px; font-size: 11px; color: #7b8a98; white-space: nowrap; }
+    .sync.on { display: flex; }
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #27ae60; display: inline-block; }
+    .sync-dot.dirty { background: #f39c12; }
+    .sync-dot.syncing { background: #3498db; animation: pulse 1s infinite; }
+    .sync-dot.error, .sync-dot.expired { background: #e74c3c; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+    .preview-bar {
+      flex: 0 0 auto; display: none; align-items: center; justify-content: center; gap: 10px;
+      background: #fff8e6; color: #7a5a00; border-bottom: 1px solid #f1dfae;
+      font-size: 12px; padding: 5px 12px; text-align: center;
+    }
+    .preview-bar.on { display: flex; }
+    .preview-bar button {
+      background: none; border: 1px solid #d9bf7a; color: #7a5a00; border-radius: 12px;
+      font-size: 11px; padding: 2px 10px; cursor: pointer;
+    }
+    .preview-bar button.confirm { background: #fdecea; border-color: #c0392b; color: #c0392b; }
+
+    /* ---------- scene ---------- */
+    .scene { position: relative; flex: 1 1 auto; min-height: 230px; background: #4b86c9; overflow: hidden; }
+    .scene canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
+    .toast {
+      position: absolute; left: 50%; top: 52px; transform: translate(-50%, -8px) scale(0.96);
+      padding: 8px 18px; border-radius: 999px; font-weight: 800; font-size: 20px; letter-spacing: 0.3px;
+      color: #fff; background: rgba(15, 30, 50, 0.72); opacity: 0; pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s; white-space: nowrap; text-align: center;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+    }
+    .toast small { display: block; font-size: 12px; font-weight: 600; opacity: 0.9; letter-spacing: 0; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    .toast.hit { background: rgba(28, 150, 86, 0.92); }
+    .toast.miss { background: rgba(214, 102, 40, 0.92); }
+    .toast.practice { background: rgba(20, 40, 70, 0.78); font-size: 16px; }
+    .formula-btn {
+      position: absolute; right: 10px; top: 10px; border: 1px solid rgba(255,255,255,0.5);
+      background: rgba(10, 30, 60, 0.45); color: #fff; border-radius: 999px; font-size: 12px; font-weight: 600;
+      padding: 6px 12px; cursor: pointer; font-style: italic;
+    }
+    .formula-card {
+      position: absolute; right: 10px; top: 44px; width: 250px; max-width: calc(100% - 20px);
+      background: rgba(255,255,255,0.96); border-radius: 12px; padding: 12px 14px; font-size: 12px; color: #334;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2); display: none; line-height: 1.45;
+    }
+    .formula-card.on { display: block; }
+    .formula-card .eq { font-family: 'Times New Roman', Georgia, serif; font-size: 20px; text-align: center; color: #0b3954; margin: 4px 0 6px; font-style: italic; }
+    .formula-card .eq sup { font-size: 12px; }
+    .notice {
+      position: absolute; left: 50%; bottom: 58px; transform: translateX(-50%); background: rgba(209,236,241,0.97);
+      color: #0c5460; border-radius: 8px; padding: 7px 14px; font-size: 12px; display: none; white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    .notice.on { display: block; }
+
+    /* ---------- control panel ---------- */
+    .panel {
+      flex: 0 0 auto; background: #fff; border-top: 1px solid #dde3ea;
+      padding: 12px 18px; display: flex; gap: 20px; align-items: center;
+    }
+    .mission { flex: 1.35 1 0; min-width: 0; }
+    .mission-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+    .round-label { font-size: 12px; font-weight: 700; color: #0770A2; text-transform: uppercase; letter-spacing: 0.6px; }
+    .tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px; background: #e6f1f8; color: #0770A2; }
+    .tag.locked { background: #fff1e0; color: #b3590b; }
+    .tag.practice { background: #eef2f6; color: #56687a; }
+    .mission-target { font-size: 15px; color: #1f2d3a; }
+    .mission-target b { font-size: 19px; color: #0b3954; }
+    .mission-target .muted { color: #6b7c8c; font-size: 12.5px; }
+    .instr { font-size: 12.5px; color: #4b5b6a; margin-top: 5px; line-height: 1.4; }
+    .instr b.ok { color: #1c9656; }
+    .instr b.bad { color: #d66628; }
+    .hint { margin-top: 5px; font-size: 12px; color: #2e6b3a; background: #eef8ef; border-radius: 6px; padding: 4px 8px; display: none; }
+    .hint.on { display: block; }
+
+    .aim { flex: 1 1 0; min-width: 0; }
+    .aim-label { font-size: 11px; font-weight: 700; color: #6b7c8c; text-transform: uppercase; letter-spacing: 0.6px; display: block; margin-bottom: 4px; }
+    .aim-row { display: flex; align-items: center; gap: 8px; }
+    .step {
+      width: 40px; height: 40px; border-radius: 10px; border: 1px solid #cfd8e1; background: #f7f9fb;
+      font-size: 22px; line-height: 1; color: #0770A2; cursor: pointer; flex: 0 0 auto; touch-action: manipulation;
+    }
+    .step:disabled { opacity: 0.4; cursor: not-allowed; }
+    .num-wrap { position: relative; flex: 1 1 auto; min-width: 0; }
+    .num-wrap input {
+      width: 100%; height: 42px; border: 2px solid #cfd8e1; border-radius: 10px; font-size: 24px; font-weight: 700;
+      text-align: center; color: #0b3954; padding: 0 24px 0 8px; font-family: inherit; background: #fff;
+      -moz-appearance: textfield; appearance: textfield;
+    }
+    .num-wrap input::-webkit-outer-spin-button, .num-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .num-wrap input:focus { outline: none; border-color: #0770A2; }
+    .num-wrap input:disabled { background: #fff8ef; border-color: #f0b27a; color: #b3590b; }
+    .num-wrap .deg { position: absolute; right: 12px; top: 6px; font-size: 22px; font-weight: 700; color: #8a99a8; pointer-events: none; }
+    input[type=range] { width: 100%; margin-top: 8px; accent-color: #0770A2; height: 26px; cursor: pointer; }
+
+    .actions { flex: 0 0 210px; display: flex; flex-direction: column; gap: 8px; }
+    .btn {
+      display: block; width: 100%; padding: 12px 16px; border: none; border-radius: 10px;
+      font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.15s, transform 0.1s;
+      touch-action: manipulation;
+    }
+    .btn:active:not(:disabled) { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: #0770A2; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #065a82; }
+    .btn-launch { background: linear-gradient(180deg, #ff8a3d, #e8641c); color: #fff; box-shadow: 0 4px 12px rgba(232,100,28,0.35); }
+    .btn-launch:hover:not(:disabled) { background: linear-gradient(180deg, #ff7d2a, #d9570f); }
+    .btn-ghost { background: #fff; color: #0770A2; border: 1.5px solid #b9d3e3; padding: 10px 14px; font-size: 14px; }
+    .btn-ghost:hover:not(:disabled) { background: #f0f7fb; }
+    .btn.hidden { display: none; }
+
+    /* ---------- results overlay ---------- */
+    .results {
+      position: absolute; left: 0; right: 0; top: 0; bottom: 0; z-index: 20; display: none;
+      background: rgba(11, 27, 48, 0.55); padding: 16px; overflow: auto; -webkit-overflow-scrolling: touch;
+    }
+    .results.on { display: flex; align-items: flex-start; justify-content: center; }
+    .res-card { background: #fff; border-radius: 16px; width: 100%; max-width: 640px; padding: 20px 22px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); margin: auto 0; }
+    .res-top { display: flex; align-items: center; gap: 18px; }
+    .ring { flex: 0 0 auto; }
+    .res-title h2 { font-size: 20px; color: #0b3954; }
+    .res-title p { font-size: 13px; color: #56687a; margin-top: 3px; }
+    .res-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 14px 0 12px; }
+    .res-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: #6b7c8c; padding: 6px 6px; border-bottom: 2px solid #e3eaf0; }
+    .res-table td { padding: 7px 6px; border-bottom: 1px solid #eef2f6; }
+    .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .pill.hit { background: #e3f6ec; color: #1c7a46; }
+    .pill.miss { background: #fdeee4; color: #b3590b; }
+    .res-status { font-size: 13px; border-radius: 8px; padding: 9px 12px; margin-bottom: 10px; display: none; line-height: 1.4; }
+    .res-status.on { display: block; }
+    .res-status.ok { background: #d4edda; color: #155724; }
+    .res-status.warn { background: #fff3cd; color: #856404; }
+    .res-status.err { background: #f8d7da; color: #721c24; }
+    .res-status.prev { background: #fff8e6; color: #7a5a00; border: 1px dashed #e0c375; }
+    .res-actions { display: flex; gap: 10px; }
+    .res-actions .btn { flex: 1 1 0; }
+
+    /* ---------- narrow screens ---------- */
+    @media (max-width: 760px) {
+      .hdr { padding: 7px 12px; gap: 8px; }
+      .brand small { display: none; }
+      .brand h1 { font-size: 16px; }
+      .chip { width: 21px; height: 21px; font-size: 10px; }
+      .chips { gap: 3px; }
+      .scorebox { display: none; }
+      .scene { flex: 0 0 auto; height: 45vh; min-height: 250px; max-height: 430px; }
+      .panel { flex: 1 1 auto; flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 14px 14px; overflow: auto; }
+      .mission, .aim { flex: 0 0 auto; }
+      .actions { flex: 0 0 auto; flex-direction: row-reverse; }
+      .actions .btn { flex: 1 1 0; }
+      .toast { font-size: 17px; top: 48px; }
+      .res-card { padding: 16px 14px; }
+      .res-table { font-size: 12px; }
+      .res-table .opt { display: none; }
+    }
+    @media (max-width: 380px) {
+      .brand svg { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="hdr">
+      <div class="brand">
+        <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+          <rect width="30" height="30" rx="8" fill="#0770A2"/>
+          <path d="M5 23 Q14 2 25 23" fill="none" stroke="#ffd27a" stroke-width="2.2" stroke-dasharray="2.5 2.5" stroke-linecap="round"/>
+          <circle cx="25" cy="23" r="2.6" fill="#ff8a3d"/>
+          <rect x="3" y="23" width="24" height="2" rx="1" fill="#bfe3f5"/>
+        </svg>
+        <div class="brand-text">
+          <h1>Launch Lab</h1>
+          <small>Projectile motion &middot; predict the angle</small>
+        </div>
+      </div>
+      <div class="chips" id="chips" aria-label="Rounds"></div>
+      <div class="scorebox" id="scorebox">Hits <b id="hitsNum">0</b> / <span id="roundsNum">5</span></div>
+      <div class="sync" id="sync"><span class="sync-dot" id="syncDot"></span><span id="syncText">Saved</span></div>
+    </header>
+    <div class="preview-bar" id="previewBar">
+      <span>Preview: try it out. Nothing is saved or submitted.</span>
+      <button type="button" id="restartBtn">Restart</button>
+    </div>
+
+    <div class="scene" id="scene">
+      <canvas id="cv" aria-label="Launch field. Drag to aim the launcher."></canvas>
+      <div class="toast" id="toast"></div>
+      <button type="button" class="formula-btn" id="formulaBtn" aria-expanded="false">R = v&sup2;sin 2&theta; / g</button>
+      <div class="formula-card" id="formulaCard">
+        <div><b>Range on level ground</b></div>
+        <div class="eq">R = v<sup>2</sup> sin(2&theta;) / g</div>
+        <div>v = <b id="fV">20</b> m/s (launch speed)<br>g = 9.8 m/s&sup2;<br>&theta; = launch angle above the ground</div>
+        <div style="margin-top:6px;color:#6b7c8c">The ball is launched from ground level. Air resistance is ignored.</div>
+      </div>
+      <div class="notice" id="notice">Welcome back: your progress was restored.</div>
+    </div>
+
+    <div class="panel" id="panel">
+      <div class="mission">
+        <div class="mission-top"><span class="round-label" id="roundLabel">Round 1 of 5</span><span class="tag" id="phaseTag">Predict</span></div>
+        <div class="mission-target">Target at <b id="targetText">18.0 m</b> <span class="muted">&middot; launch speed <span id="speedText">20</span> m/s &middot; hit zone &plusmn;<span id="tolText">1.5</span> m</span></div>
+        <p class="instr" id="instr">Loading&hellip;</p>
+        <p class="hint" id="hint">Hint: two different launch angles can land on the same spot.</p>
+      </div>
+      <div class="aim">
+        <label class="aim-label" for="angleNum">Launch angle &theta; (degrees)</label>
+        <div class="aim-row">
+          <button type="button" class="step" id="minusBtn" aria-label="Decrease angle by 0.5 degrees">&minus;</button>
+          <div class="num-wrap">
+            <input id="angleNum" type="number" inputmode="decimal" min="0" max="90" step="0.1" value="45" aria-label="Launch angle in degrees">
+            <span class="deg">&deg;</span>
+          </div>
+          <button type="button" class="step" id="plusBtn" aria-label="Increase angle by 0.5 degrees">+</button>
+        </div>
+        <input type="range" id="angleRange" min="0" max="90" step="0.1" value="45" aria-label="Launch angle slider">
+      </div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="primaryBtn" disabled>Lock in prediction</button>
+        <button type="button" class="btn btn-ghost hidden" id="secondaryBtn">Change prediction</button>
+      </div>
+    </div>
+
+    <div class="results" id="results">
+      <div class="res-card">
+        <div class="res-top">
+          <svg class="ring" id="ring" width="92" height="92" viewBox="0 0 92 92" aria-hidden="true"></svg>
+          <div class="res-title">
+            <h2 id="resTitle">Lab complete</h2>
+            <p id="resSub"></p>
+          </div>
+        </div>
+        <table class="res-table" id="resTable"></table>
+        <div class="res-status" id="resStatus"></div>
+        <div class="res-actions">
+          <button type="button" class="btn btn-ghost hidden" id="againBtn">Play again</button>
+          <button type="button" class="btn btn-primary" id="submitBtn">Submit results</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var G = 9.8;
+    var DEFAULTS = { targets: '18, 27, 36, 24, 33', launchSpeed: 20, tolerance: 1.5, showGuide: false };
+    var MAX_PRACTICE = 30;
+
+    // ---------- helpers ----------
+    function $(id) { return document.getElementById(id); }
+    function clamp(x, a, b) { return x < a ? a : (x > b ? b : x); }
+    function r1(x) { return Math.round(x * 10) / 10; }
+    function r2(x) { return Math.round(x * 100) / 100; }
+    function f1(x) { return r1(x).toFixed(1); }
+    function signed(x) { return (x >= 0 ? '+' : '−') + f1(Math.abs(x)); }
+    function rad(d) { return d * Math.PI / 180; }
+    function esc(s) { var d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+
+    function rangeOf(v, deg) { return v * v * Math.sin(2 * rad(deg)) / G; }
+    function timeOf(v, deg) { return 2 * v * Math.sin(rad(deg)) / G; }
+    function peakOf(v, deg) { var vy = v * Math.sin(rad(deg)); return vy * vy / (2 * G); }
+
+    // ---------- settings (parameters) ----------
+    function toBool(x) { return x === true || x === 'true' || x === 1 || x === '1'; }
+    function buildConfig(raw) {
+      var v = parseFloat(raw.launchSpeed);
+      if (!isFinite(v)) v = DEFAULTS.launchSpeed;
+      v = clamp(v, 5, 60);
+      var tol = parseFloat(raw.tolerance);
+      if (!isFinite(tol)) tol = DEFAULTS.tolerance;
+      tol = clamp(tol, 0.25, 5);
+      var maxR = v * v / G;
+      var lo = Math.max(2, tol * 2);
+      var hi = Math.floor(maxR * 0.95 * 2) / 2;   // stays reachable with room for the hit zone
+      var parts = String(raw.targets === null || raw.targets === undefined ? '' : raw.targets).split(/[,;\s]+/);
+      var targets = [];
+      for (var i = 0; i < parts.length && targets.length < 10; i++) {
+        var t = parseFloat(parts[i]);
+        if (isFinite(t) && t > 0) targets.push(Math.round(clamp(t, lo, hi) * 10) / 10);
+      }
+      if (!targets.length) {
+        var dflt = DEFAULTS.targets.split(/,\s*/);
+        for (var j = 0; j < dflt.length; j++) targets.push(Math.round(clamp(parseFloat(dflt[j]), lo, hi) * 10) / 10);
+      }
+      return { v: v, tol: tol, targets: targets, guide: toBool(raw.showGuide) };
+    }
+
+    // ---------- session state ----------
+    var mode = 'none';            // 'preview' | 'live'
+    var cfg = buildConfig(DEFAULTS);
+    var S = null;                 // { rounds, idx, phase, angle, submitted, submitInfo }
+    var flying = null;            // current animation
+    var submitting = false;
+
+    function newSession(c) {
+      var rounds = [];
+      for (var i = 0; i < c.targets.length; i++) {
+        rounds.push({ target: c.targets[i], predicted: null, landing: null, error: null, hit: null, flightTime: null, maxHeight: null, practice: [] });
+      }
+      return { rounds: rounds, idx: 0, phase: 'aim', angle: 45, submitted: false, submitInfo: null };
+    }
+
+    function gatherState() {
+      return {
+        v: 1,
+        cfg: { v: cfg.v, tol: cfg.tol, targets: cfg.targets },
+        rounds: S.rounds, idx: S.idx, phase: S.phase, angle: S.angle,
+        submitted: S.submitted, submitInfo: S.submitInfo
+      };
+    }
+    function save() {
+      if (mode !== 'live') return;
+      try { Zest.saveState(gatherState()); } catch (e) { /* ignore */ }
+    }
+    function restore(st) {
+      if (!st || st.v !== 1 || !st.rounds || !st.rounds.length || !st.cfg) return false;
+      // Keep the settings the student started with, so a mid-attempt change cannot break their rounds.
+      cfg = { v: st.cfg.v, tol: st.cfg.tol, targets: st.cfg.targets, guide: cfg.guide };
+      S = newSession(cfg);
+      for (var i = 0; i < S.rounds.length && i < st.rounds.length; i++) {
+        var r = st.rounds[i];
+        if (r && typeof r.predicted === 'number') {
+          S.rounds[i].predicted = r.predicted; S.rounds[i].landing = r.landing; S.rounds[i].error = r.error;
+          S.rounds[i].hit = !!r.hit; S.rounds[i].flightTime = r.flightTime; S.rounds[i].maxHeight = r.maxHeight;
+        }
+        if (r && r.practice && r.practice.length) S.rounds[i].practice = r.practice.slice(0, MAX_PRACTICE);
+      }
+      S.idx = clamp(st.idx | 0, 0, S.rounds.length - 1);
+      S.phase = st.phase === 'locked' || st.phase === 'practice' || st.phase === 'results' ? st.phase : 'aim';
+      if (S.rounds[S.idx].predicted !== null && (S.phase === 'aim' || S.phase === 'locked')) S.phase = 'practice';
+      if (S.phase === 'practice' && S.rounds[S.idx].predicted === null) S.phase = 'aim';
+      S.angle = typeof st.angle === 'number' ? clamp(st.angle, 0, 90) : 45;
+      S.submitted = !!st.submitted;
+      S.submitInfo = st.submitInfo || null;
+      if (S.submitted) S.phase = 'results';
+      return true;
+    }
+
+    // ---------- DOM ----------
+    var cv = $('cv'), ctx = cv.getContext('2d');
+    var angleNum = $('angleNum'), angleRange = $('angleRange');
+    var primaryBtn = $('primaryBtn'), secondaryBtn = $('secondaryBtn');
+    var toastEl = $('toast');
+    var toastTimer = null;
+
+    function showToast(html, cls, ms) {
+      toastEl.innerHTML = html;
+      toastEl.className = 'toast show ' + (cls || '');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = ms ? setTimeout(hideToast, ms) : null;
+    }
+    function hideToast() { toastEl.className = 'toast'; }
+
+    function setAngle(a, fromInput) {
+      if (!isFinite(a)) return;
+      S.angle = r1(clamp(a, 0, 90));
+      if (!fromInput) angleNum.value = f1(S.angle);
+      angleRange.value = S.angle;
+    }
+
+    function canAim() { return S && !flying && (S.phase === 'aim' || S.phase === 'practice'); }
+
+    function render() {
+      if (!S) return;
+      var n = S.rounds.length, r = S.rounds[S.idx], hits = 0, i;
+      var chips = '';
+      for (i = 0; i < n; i++) {
+        var rr = S.rounds[i], cls = 'chip';
+        var done = rr.predicted !== null && !(flying && flying.kind === 'scored' && i === S.idx);
+        if (done) { cls += rr.hit ? ' hit' : ' miss'; if (rr.hit) hits++; }
+        else if (i === S.idx) cls += ' cur';
+        chips += '<span class="' + cls + '" title="Round ' + (i + 1) + '">' + (done ? (rr.hit ? '&#10003;' : '&times;') : (i + 1)) + '</span>';
+      }
+      $('chips').innerHTML = chips;
+      $('hitsNum').textContent = hits;
+      $('roundsNum').textContent = n;
+      $('roundLabel').textContent = 'Round ' + (S.idx + 1) + ' of ' + n;
+      $('targetText').textContent = f1(r.target) + ' m';
+      $('speedText').textContent = r1(cfg.v);
+      $('tolText').textContent = r2(cfg.tol);
+      $('fV').textContent = r1(cfg.v);
+
+      var tag = $('phaseTag'), instr = $('instr');
+      var locked = S.phase === 'locked';
+      angleNum.disabled = !canAim();
+      angleRange.disabled = !canAim();
+      $('minusBtn').disabled = !canAim();
+      $('plusBtn').disabled = !canAim();
+      primaryBtn.disabled = !!flying || submitting;
+      secondaryBtn.disabled = !!flying;
+      $('hint').className = 'hint' + (cfg.guide && (S.phase === 'aim' || S.phase === 'practice') ? ' on' : '');
+
+      if (flying) {
+        tag.className = 'tag' + (flying.kind === 'practice' ? ' practice' : ' locked');
+        tag.textContent = flying.kind === 'practice' ? 'Practice' : 'Scored shot';
+        instr.textContent = 'In flight… watch where it lands.';
+      } else if (S.phase === 'aim') {
+        tag.className = 'tag'; tag.textContent = 'Predict';
+        instr.innerHTML = 'Work out the launch angle that lands the ball on the target, then lock it in. <b>Your prediction is the scored shot.</b>';
+      } else if (locked) {
+        tag.className = 'tag locked'; tag.textContent = 'Locked';
+        instr.innerHTML = 'Prediction locked at <b>' + f1(S.angle) + '&deg;</b>. Launch when ready.';
+      } else if (S.phase === 'practice') {
+        tag.className = 'tag practice'; tag.textContent = 'Practice';
+        var res = r.hit ? '<b class="ok">HIT</b>' : '<b class="bad">' + f1(Math.abs(r.error)) + ' m ' + (r.error < 0 ? 'short' : 'long') + '</b>';
+        instr.innerHTML = 'Scored: ' + f1(r.predicted) + '&deg; landed at ' + f1(r.landing) + ' m, ' + res + '. ' +
+          'Now explore with practice shots (not scored). Can a <i>different</i> angle hit the same target?';
+      }
+
+      primaryBtn.className = 'btn btn-primary';
+      secondaryBtn.className = 'btn btn-ghost';
+      if (S.phase === 'aim') {
+        primaryBtn.textContent = 'Lock in prediction';
+        secondaryBtn.className += ' hidden';
+      } else if (locked) {
+        primaryBtn.className = 'btn btn-launch';
+        primaryBtn.textContent = 'Launch!';
+        secondaryBtn.textContent = 'Change prediction';
+      } else {
+        primaryBtn.textContent = S.idx < n - 1 ? 'Next target →' : 'See results';
+        secondaryBtn.textContent = 'Practice shot';
+      }
+      if (flying) primaryBtn.textContent = flying.kind === 'practice' ? 'Practice in flight…' : 'In flight…';
+    }
+
+    // ---------- actions ----------
+    function lockPrediction() {
+      var a = parseFloat(angleNum.value);
+      if (isFinite(a)) setAngle(a);
+      S.phase = 'locked'; hideToast();
+      save(); render();
+    }
+    function unlock() { S.phase = 'aim'; save(); render(); }
+
+    function launch(kind) {
+      var r = S.rounds[S.idx];
+      var a = S.angle;
+      var shot = { angle: a, landing: r2(rangeOf(cfg.v, a)), kind: kind };
+      shot.error = r2(shot.landing - r.target);
+      if (kind === 'scored') {
+        r.predicted = a; r.landing = shot.landing; r.error = shot.error;
+        r.hit = Math.abs(shot.error) <= cfg.tol + 1e-9;
+        r.flightTime = r2(timeOf(cfg.v, a)); r.maxHeight = r2(peakOf(cfg.v, a));
+        S.phase = 'practice';
+        shot.ref = r;
+      } else {
+        var p = { angle: a, landing: shot.landing, error: shot.error };
+        if (r.practice.length >= MAX_PRACTICE) r.practice.shift();
+        r.practice.push(p);
+        shot.ref = p;
+      }
+      save();   // the prediction is committed before the ball flies
+      hideToast();
+      startFlight(shot);
+      render();
+    }
+
+    function nextRound() {
+      hideToast();
+      if (S.idx < S.rounds.length - 1) {
+        S.idx++; S.phase = 'aim'; lastShot = null; effects = [];
+        save(); render();
+      } else {
+        S.phase = 'results'; save(); showResults();
+      }
+    }
+
+    // ---------- results & submission ----------
+    function hitsCount() { var h = 0; for (var i = 0; i < S.rounds.length; i++) if (S.rounds[i].hit) h++; return h; }
+
+    function showResults() {
+      var n = S.rounds.length, h = hitsCount();
+      var pct = n ? h / n : 0;
+      var C = 2 * Math.PI * 38;
+      $('ring').innerHTML =
+        '<circle cx="46" cy="46" r="38" fill="none" stroke="#e8eef3" stroke-width="9"/>' +
+        '<circle cx="46" cy="46" r="38" fill="none" stroke="' + (pct >= 0.6 ? '#22a660' : '#f08a4b') + '" stroke-width="9" stroke-linecap="round" ' +
+        'stroke-dasharray="' + (C * pct).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90 46 46)"/>' +
+        '<text x="46" y="50" text-anchor="middle" font-size="22" font-weight="800" fill="#0b3954">' + h + '/' + n + '</text>' +
+        '<text x="46" y="66" text-anchor="middle" font-size="9" fill="#6b7c8c">HITS</text>';
+      $('resTitle').textContent = h === n ? 'Perfect launch record!' : 'Lab complete';
+      var practiceTotal = 0;
+      for (var k = 0; k < n; k++) practiceTotal += S.rounds[k].practice.length;
+      $('resSub').textContent = 'You hit ' + h + ' of ' + n + ' targets with your predictions' +
+        (practiceTotal ? ' and took ' + practiceTotal + ' practice shot' + (practiceTotal === 1 ? '' : 's') + '.' : '.');
+      var t = '<tr><th>#</th><th>Target</th><th>Predicted</th><th>Landed</th><th>Off by</th><th>Result</th><th class="opt">Practice</th></tr>';
+      for (var i = 0; i < n; i++) {
+        var r = S.rounds[i];
+        t += '<tr><td>' + (i + 1) + '</td><td>' + f1(r.target) + ' m</td><td><b>' + (r.predicted === null ? '&ndash;' : f1(r.predicted) + '&deg;') + '</b></td>' +
+          '<td>' + (r.landing === null ? '&ndash;' : f1(r.landing) + ' m') + '</td>' +
+          '<td>' + (r.error === null ? '&ndash;' : signed(r.error) + ' m') + '</td>' +
+          '<td><span class="pill ' + (r.hit ? 'hit">HIT' : 'miss">MISS') + '</span></td>' +
+          '<td class="opt">' + r.practice.length + '</td></tr>';
+      }
+      $('resTable').innerHTML = t;
+      $('results').className = 'results on';
+      renderSubmitStatus();
+    }
+
+    function renderSubmitStatus() {
+      var st = $('resStatus'), btn = $('submitBtn'), again = $('againBtn');
+      again.className = 'btn btn-ghost' + (mode === 'preview' ? '' : ' hidden');
+      if (submitting) { btn.disabled = true; btn.textContent = 'Submitting…'; return; }
+      var info = S.submitInfo;
+      if (S.submitted) {
+        btn.disabled = true;
+        btn.textContent = mode === 'preview' ? 'Not submitted (preview)' : 'Submitted';
+        if (mode === 'preview') { st.className = 'res-status on prev'; st.textContent = 'Preview: this is what a student sees after submitting. Nothing was sent to a gradebook.'; }
+        else if (info && info.agsStatus === 'failed') { st.className = 'res-status on warn'; st.textContent = 'Your results are saved. Canvas has not received the grade yet; it will appear in the gradebook shortly. You do not need to submit again.'; }
+        else if (info && info.agsStatus === 'skipped') { st.className = 'res-status on ok'; st.textContent = 'Your results are saved. (This placement has no gradebook column.)'; }
+        else { st.className = 'res-status on ok'; st.textContent = 'Submitted. Your score of ' + hitsCount() + ' / ' + S.rounds.length + ' is in the gradebook.'; }
+        return;
+      }
+      btn.disabled = false;
+      if (info && info.error) {
+        btn.textContent = 'Retry submit';
+        st.className = 'res-status on err'; st.textContent = 'Could not submit: ' + info.error + '. Your work is still here; try again.';
+      } else {
+        btn.textContent = 'Submit results';
+        st.className = 'res-status';
+      }
+    }
+
+    function buildArtifacts() {
+      var rounds = [];
+      for (var i = 0; i < S.rounds.length; i++) {
+        var r = S.rounds[i];
+        rounds.push({
+          round: i + 1, target: r.target, predictedAngle: r.predicted, landing: r.landing, error: r.error,
+          hit: !!r.hit, flightTime: r.flightTime, maxHeight: r.maxHeight, practice: r.practice.slice(0)
+        });
+      }
+      return {
+        activity: 'launch-lab', version: '1.0.0',
+        settings: { launchSpeed: cfg.v, tolerance: cfg.tol, g: G, targets: cfg.targets.slice(0), showGuide: !!cfg.guide },
+        rounds: rounds, hits: hitsCount(), total: S.rounds.length,
+        completedAt: new Date().toISOString()
+      };
+    }
+
+    function submit() {
+      if (submitting || S.submitted) return;
+      submitting = true; renderSubmitStatus();
+      if (mode !== 'live') {
+        setTimeout(function () {
+          submitting = false; S.submitted = true; S.submitInfo = { preview: true };
+          renderSubmitStatus();
+        }, 700);
+        return;
+      }
+      var h = hitsCount(), n = S.rounds.length;
+      var artifacts = buildArtifacts();
+      Zest.submitScore(h, {
+        maxScore: n,
+        artifacts: artifacts,
+        comment: 'Launch Lab: hit ' + h + ' of ' + n + ' targets'
+      }).then(function (result) {
+        submitting = false;
+        if (result && result.success) {
+          S.submitted = true;
+          S.submitInfo = { agsStatus: result.agsStatus || null, at: artifacts.completedAt };
+        } else {
+          S.submitInfo = { error: (result && result.error) || 'unknown error' };
+        }
+        save(); renderSubmitStatus();
+      }, function (err) {
+        submitting = false;
+        S.submitInfo = { error: (err && err.message) || 'network error' };
+        save(); renderSubmitStatus();
+      });
+    }
+
+    // ---------- scene: layout & drawing ----------
+    var L = { w: 0, h: 0, dpr: 1 };
+    var bg = document.createElement('canvas'), bgx = bg.getContext('2d');
+    var clouds = [];
+    var lastShot = null;      // the most recent shot landed this round (for markers/HUD)
+    var effects = [];         // particles and rings
+    var dragging = false;
+
+    function layout() {
+      var w = cv.clientWidth, h = cv.clientHeight;
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (w === L.w && h === L.h && dpr === L.dpr) return false;
+      L.w = w; L.h = h; L.dpr = dpr;
+      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+      L.groundH = clamp(Math.round(h * 0.11), 34, 46);
+      L.groundY = h - L.groundH;
+      L.ox = clamp(Math.round(w * 0.055), 30, 60);
+      var maxR = cfg.v * cfg.v / G, hMax = cfg.v * cfg.v / (2 * G);
+      var maxT = 0;
+      for (var i = 0; i < cfg.targets.length; i++) maxT = Math.max(maxT, cfg.targets[i]);
+      L.worldW = Math.max(maxR * 1.05, maxT + cfg.tol + 2);
+      var sx = (w - L.ox - 16) / L.worldW;
+      var sy = (L.groundY - 36) / (0.72 * hMax);
+      L.s = Math.max(0.5, Math.min(sx, sy));
+      buildBackground();
+      clouds = [];
+      for (var c = 0; c < 4; c++) {
+        clouds.push({ x: (c * 0.29 + 0.08) * w, y: (0.1 + (c % 2) * 0.12 + c * 0.03) * L.groundY, k: 0.7 + (c % 3) * 0.25, sp: 4 + c * 2 });
+      }
+      return true;
+    }
+    function X(m) { return L.ox + m * L.s; }
+    function Y(m) { return L.groundY - m * L.s; }
+
+    function buildBackground() {
+      var w = L.w, h = L.h, gy = L.groundY;
+      bg.width = cv.width; bg.height = cv.height;
+      var g = bgx;
+      g.setTransform(L.dpr, 0, 0, L.dpr, 0, 0);
+      var sky = g.createLinearGradient(0, 0, 0, gy);
+      sky.addColorStop(0, '#16386e');
+      sky.addColorStop(0.45, '#3f78c0');
+      sky.addColorStop(0.8, '#9cc9ea');
+      sky.addColorStop(1, '#f5dcb0');
+      g.fillStyle = sky; g.fillRect(0, 0, w, gy + 2);
+      // sun glow
+      var sx = w * 0.8, sy = gy * 0.3;
+      var sun = g.createRadialGradient(sx, sy, 0, sx, sy, Math.max(90, w * 0.12));
+      sun.addColorStop(0, 'rgba(255,248,220,0.95)');
+      sun.addColorStop(0.12, 'rgba(255,236,180,0.85)');
+      sun.addColorStop(0.35, 'rgba(255,220,150,0.25)');
+      sun.addColorStop(1, 'rgba(255,220,150,0)');
+      g.fillStyle = sun; g.fillRect(0, 0, w, gy);
+      // far mountains
+      g.beginPath(); g.moveTo(0, gy);
+      var x;
+      for (x = 0; x <= w + 10; x += 10) {
+        var yy = gy - h * 0.16 - Math.sin(x * 0.011) * h * 0.05 - Math.sin(x * 0.027 + 1.3) * h * 0.025;
+        g.lineTo(x, yy);
+      }
+      g.lineTo(w, gy); g.closePath();
+      g.fillStyle = 'rgba(78, 112, 168, 0.55)'; g.fill();
+      // near hills
+      g.beginPath(); g.moveTo(0, gy);
+      for (x = 0; x <= w + 10; x += 10) {
+        g.lineTo(x, gy - h * 0.06 - Math.sin(x * 0.008 + 2.1) * h * 0.035 - Math.sin(x * 0.021) * h * 0.012);
+      }
+      g.lineTo(w, gy); g.closePath();
+      var hill = g.createLinearGradient(0, gy - h * 0.12, 0, gy);
+      hill.addColorStop(0, '#78ad69'); hill.addColorStop(1, '#5b9150');
+      g.fillStyle = hill; g.fill();
+      // ground
+      var gr = g.createLinearGradient(0, gy, 0, h);
+      gr.addColorStop(0, '#5fae45'); gr.addColorStop(1, '#3b7a2f');
+      g.fillStyle = gr; g.fillRect(0, gy, w, h - gy);
+      g.fillStyle = '#8fd16a'; g.fillRect(0, gy, w, 2.5);
+      // ruler
+      var s = L.s, maxM = Math.floor((w - L.ox) / s);
+      var labelEvery = s >= 16 ? 5 : 10;
+      g.strokeStyle = 'rgba(255,255,255,0.85)'; g.fillStyle = '#fff';
+      g.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      g.textAlign = 'center'; g.textBaseline = 'top';
+      for (var m = 0; m <= maxM; m++) {
+        var tx = Math.round(X(m)) + 0.5, len;
+        if (m % 10 === 0) len = 12; else if (m % 5 === 0) len = 8; else if (s >= 5) len = 4; else continue;
+        g.lineWidth = m % 5 === 0 ? 1.4 : 1;
+        g.beginPath(); g.moveTo(tx, gy + 2); g.lineTo(tx, gy + 2 + len); g.stroke();
+        if (m % labelEvery === 0) {
+          g.shadowColor = 'rgba(0,0,0,0.35)'; g.shadowBlur = 3;
+          g.fillText(m === 0 ? '0' : (m + (m === labelEvery ? ' m' : '')), tx, gy + 16);
+          g.shadowBlur = 0;
+        }
+      }
+    }
+
+    function roundRect(g, x, y, w, h, r) {
+      g.beginPath();
+      g.moveTo(x + r, y); g.lineTo(x + w - r, y); g.quadraticCurveTo(x + w, y, x + w, y + r);
+      g.lineTo(x + w, y + h - r); g.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      g.lineTo(x + r, y + h); g.quadraticCurveTo(x, y + h, x, y + h - r);
+      g.lineTo(x, y + r); g.quadraticCurveTo(x, y, x + r, y); g.closePath();
+    }
+
+    function drawCloud(g, cx, cy, k) {
+      g.beginPath();
+      g.arc(cx, cy, 16 * k, 0, Math.PI * 2);
+      g.arc(cx + 18 * k, cy - 8 * k, 20 * k, 0, Math.PI * 2);
+      g.arc(cx + 40 * k, cy, 15 * k, 0, Math.PI * 2);
+      g.arc(cx + 20 * k, cy + 6 * k, 16 * k, 0, Math.PI * 2);
+      g.fill();
+    }
+
+    function drawTarget(g, now) {
+      var r = S.rounds[S.idx];
+      var t = r.target, x = X(t), gy = L.groundY;
+      var scoredDone = r.predicted !== null && !(flying && flying.kind === 'scored');
+      // hit zone band
+      var x0 = X(t - cfg.tol), x1 = X(t + cfg.tol);
+      g.fillStyle = scoredDone && r.hit ? 'rgba(46, 224, 138, 0.45)' : 'rgba(255, 90, 79, 0.42)';
+      g.fillRect(x0, gy - 1, x1 - x0, 7);
+      g.fillStyle = 'rgba(255,255,255,0.9)';
+      g.fillRect(x - 1, gy - 1, 2, 7);
+      g.strokeStyle = 'rgba(255,255,255,0.75)'; g.lineWidth = 1;
+      g.strokeRect(Math.round(x0) + 0.5, gy - 0.5, Math.round(x1 - x0), 6);
+      // pole
+      var ph = clamp(L.h * 0.14, 40, 60);
+      g.strokeStyle = '#f4f4f4'; g.lineWidth = 2.5;
+      g.beginPath(); g.moveTo(x, gy); g.lineTo(x, gy - ph); g.stroke();
+      g.fillStyle = '#ffd24a'; g.beginPath(); g.arc(x, gy - ph, 3, 0, Math.PI * 2); g.fill();
+      // waving flag
+      var fw = 26, fh = 17, wav = now / 260;
+      g.beginPath();
+      g.moveTo(x, gy - ph + 2);
+      g.quadraticCurveTo(x + fw * 0.5, gy - ph + 2 + Math.sin(wav) * 3, x + fw, gy - ph + 4 + Math.sin(wav + 1) * 2.5);
+      g.lineTo(x + fw, gy - ph + 4 + fh + Math.sin(wav + 1) * 2.5);
+      g.quadraticCurveTo(x + fw * 0.5, gy - ph + 2 + fh + Math.sin(wav) * 3, x, gy - ph + 2 + fh);
+      g.closePath();
+      g.fillStyle = scoredDone && r.hit ? '#22c46e' : '#ff4f45';
+      g.fill();
+      // label
+      var label = f1(t) + ' m';
+      g.font = '700 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      var lw = g.measureText(label).width + 14;
+      var lx = clamp(x - lw / 2, 4, L.w - lw - 4), ly = gy - ph - 28;
+      g.fillStyle = 'rgba(10, 25, 45, 0.72)'; roundRect(g, lx, ly, lw, 20, 10); g.fill();
+      g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(label, lx + lw / 2, ly + 10.5);
+    }
+
+    function arcPath(g, deg, tEnd) {
+      var v = cfg.v, a = rad(deg), vx = v * Math.cos(a), vy = v * Math.sin(a);
+      var T = timeOf(v, deg), end = tEnd === undefined ? T : Math.min(tEnd, T);
+      var steps = 60;
+      g.beginPath();
+      for (var i = 0; i <= steps; i++) {
+        var t = end * i / steps;
+        var px = X(vx * t), py = Y(vy * t - 0.5 * G * t * t);
+        if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
+      }
+    }
+
+    function drawShots(g) {
+      var r = S.rounds[S.idx], i, p;
+      // practice arcs (ghosts)
+      g.setLineDash([5, 5]); g.lineWidth = 2;
+      for (i = 0; i < r.practice.length; i++) {
+        p = r.practice[i];
+        if (flying && flying.ref === p) continue;
+        g.strokeStyle = lastShot && lastShot.ref === p ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.42)';
+        arcPath(g, p.angle); g.stroke();
+      }
+      g.setLineDash([]);
+      // scored arc
+      if (r.predicted !== null && !(flying && flying.kind === 'scored')) {
+        g.lineWidth = 3.2;
+        g.strokeStyle = r.hit ? '#2ee08a' : '#ff8a4c';
+        g.shadowColor = 'rgba(0,0,0,0.25)'; g.shadowBlur = 4;
+        arcPath(g, r.predicted); g.stroke();
+        g.shadowBlur = 0;
+        dot(g, X(r.landing), L.groundY, 4.5, r.hit ? '#2ee08a' : '#ff8a4c');
+      }
+      for (i = 0; i < r.practice.length; i++) {
+        p = r.practice[i];
+        if (flying && flying.ref === p) continue;
+        dot(g, X(p.landing), L.groundY, 3, 'rgba(255,255,255,0.8)');
+      }
+    }
+    function dot(g, x, y, rr, col) { g.fillStyle = col; g.beginPath(); g.arc(x, y, rr, 0, Math.PI * 2); g.fill(); }
+
+    function drawLastShotMarkers(g) {
+      if (!lastShot || flying) return;
+      var x = X(lastShot.landing), gy = L.groundY;
+      var col = lastShot.kind === 'scored' ? (lastShot.ref.hit ? '#2ee08a' : '#ff8a4c') : '#ffffff';
+      // apex guide
+      var pk = peakOf(cfg.v, lastShot.angle), ax = X(lastShot.landing / 2), ay = Y(pk);
+      if (ay > 6 && L.w > 480) {
+        g.setLineDash([2, 4]); g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 1;
+        g.beginPath(); g.moveTo(ax, ay); g.lineTo(ax, gy); g.stroke(); g.setLineDash([]);
+        g.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        g.fillStyle = 'rgba(255,255,255,0.9)'; g.textAlign = 'left'; g.textBaseline = 'bottom';
+        g.fillText('peak ' + f1(pk) + ' m', ax + 5, ay - 3);
+      }
+      // pin
+      var ph = 30;
+      g.strokeStyle = col; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(x, gy); g.lineTo(x, gy - ph); g.stroke();
+      var label = f1(lastShot.landing) + ' m';
+      g.font = '700 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      var lw = g.measureText(label).width + 14;
+      var lx = clamp(x - lw / 2, 4, L.w - lw - 4), ly = gy - ph - 20;
+      g.fillStyle = col; roundRect(g, lx, ly, lw, 20, 10); g.fill();
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillStyle = lastShot.kind !== 'scored' ? '#0b3954' : (lastShot.ref.hit ? '#08301b' : '#4a1d05');
+      g.fillText(label, lx + lw / 2, ly + 10.5);
+    }
+
+    function drawLauncher(g) {
+      var ox = L.ox, gy = L.groundY, a = rad(S.angle);
+      if (flying) a = rad(flying.angle);
+      var locked = S.phase === 'locked' && !flying;
+      var deg = flying ? flying.angle : S.angle;
+      // guide line
+      if (cfg.guide && !flying) {
+        g.setLineDash([2, 6]); g.lineCap = 'round';
+        g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 2.2;
+        var gl = Math.min(L.w * 0.35, 220);
+        g.beginPath(); g.moveTo(ox + Math.cos(a) * 40, gy - Math.sin(a) * 40);
+        g.lineTo(ox + Math.cos(a) * gl, gy - Math.sin(a) * gl); g.stroke();
+        g.setLineDash([]); g.lineCap = 'butt';
+      }
+      // angle arc
+      g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 1.5;
+      g.beginPath(); g.arc(ox, gy, 30, -a, 0); g.stroke();
+      // barrel
+      g.save();
+      g.translate(ox, gy); g.rotate(-a);
+      var bl = 36, bw = 11;
+      var bgd = g.createLinearGradient(0, -bw / 2, 0, bw / 2);
+      bgd.addColorStop(0, '#6d8298'); bgd.addColorStop(0.45, '#2f4356'); bgd.addColorStop(1, '#1d2b38');
+      g.fillStyle = bgd; roundRect(g, 0, -bw / 2, bl, bw, 3); g.fill();
+      g.fillStyle = locked ? '#ffb347' : '#e8641c';
+      g.fillRect(bl - 5, -bw / 2 - 1.5, 5, bw + 3);
+      g.restore();
+      // dome
+      var dg = g.createLinearGradient(0, gy - 16, 0, gy);
+      dg.addColorStop(0, '#50677e'); dg.addColorStop(1, '#22313f');
+      g.fillStyle = dg;
+      g.beginPath(); g.arc(ox, gy, 15, Math.PI, 0); g.closePath(); g.fill();
+      if (locked) {
+        g.strokeStyle = 'rgba(255,179,71,0.9)'; g.lineWidth = 2.5;
+        g.beginPath(); g.arc(ox, gy, 19, Math.PI, 0); g.stroke();
+      }
+      g.fillStyle = '#1b2733'; g.fillRect(ox - 22, gy - 1, 44, 4);
+      // angle label
+      var la = a / 2, lr = 46;
+      var lx = ox + Math.cos(la) * lr + 4, ly = gy - Math.sin(la) * lr;
+      if (deg < 12) { lx = ox + 48; ly = gy - 16; }
+      g.font = '800 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      g.textAlign = 'left'; g.textBaseline = 'middle';
+      g.shadowColor = 'rgba(0,0,0,0.45)'; g.shadowBlur = 4;
+      g.fillStyle = locked ? '#ffd29a' : '#fff';
+      g.fillText(f1(deg) + '°', lx, ly);
+      g.shadowBlur = 0;
+    }
+
+    function drawHud(g, lines) {
+      g.font = '600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      var w = 0, i;
+      for (i = 0; i < lines.length; i++) w = Math.max(w, g.measureText(lines[i]).width);
+      w += 20;
+      g.fillStyle = 'rgba(8, 22, 42, 0.55)'; roundRect(g, 10, 10, w, 12 + lines.length * 16, 9); g.fill();
+      g.fillStyle = '#fff'; g.textAlign = 'left'; g.textBaseline = 'top';
+      for (i = 0; i < lines.length; i++) g.fillText(lines[i], 20, 17 + i * 16);
+    }
+
+    function startFlight(shot) {
+      var T = timeOf(cfg.v, shot.angle);
+      var rate = T < 1.1 ? T / 1.1 : (T > 2.6 ? T / 2.6 : 1);
+      if (T <= 0.0001) rate = 1;
+      flying = { kind: shot.kind, angle: shot.angle, landing: shot.landing, error: shot.error, ref: shot.ref, T: T, rate: rate, start: null, trail: [] };
+    }
+
+    function land(f) {
+      var r = S.rounds[S.idx];
+      lastShot = { kind: f.kind, angle: f.angle, landing: f.landing, ref: f.ref };
+      flying = null;
+      var now = perfNow();
+      var x = X(f.landing), i;
+      for (i = 0; i < 18; i++) {
+        var ang = Math.PI * (0.1 + 0.8 * Math.random());
+        var sp = 40 + Math.random() * 90;
+        effects.push({ type: 'p', x: x, y: L.groundY, vx: Math.cos(ang) * sp, vy: -Math.sin(ang) * sp, t0: now, life: 700 + Math.random() * 400, c: f.kind === 'scored' && r.hit ? '#bff5d6' : '#e8dcc0' });
+      }
+      if (f.kind === 'scored') {
+        if (r.hit) {
+          effects.push({ type: 'ring', x: X(r.target), t0: now, life: 1100 });
+          effects.push({ type: 'ring', x: X(r.target), t0: now + 180, life: 1100 });
+          showToast('HIT! <small>' + f1(f.angle) + '&deg; &rarr; ' + f1(f.landing) + ' m (' + signed(f.error) + ' m)</small>', 'hit');
+        } else {
+          showToast(f1(Math.abs(f.error)) + ' m ' + (f.error < 0 ? 'SHORT' : 'LONG') + '<small>' + f1(f.angle) + '&deg; &rarr; ' + f1(f.landing) + ' m &middot; missed</small>', 'miss');
+        }
+      } else {
+        var near = Math.abs(f.error) <= cfg.tol;
+        showToast('Practice: ' + f1(f.landing) + ' m <small>' + f1(f.angle) + '&deg; &middot; ' + (near ? 'would hit' : signed(f.error) + ' m') + ' &middot; not scored</small>', 'practice', 4000);
+      }
+      render();
+    }
+
+    function perfNow() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
+
+    function frame() {
+      if (S && L.w !== undefined) {
+        try { draw(); } catch (e) { if (window.console) console.error(e); }
+      }
+      window.requestAnimationFrame(frame);
+    }
+
+    function draw() {
+      layout();
+      if (!L.w || !L.h) return;
+      var now = perfNow();
+      var g = ctx;
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.drawImage(bg, 0, 0);
+      g.setTransform(L.dpr, 0, 0, L.dpr, 0, 0);
+      // clouds
+      g.fillStyle = 'rgba(255,255,255,0.78)';
+      for (var c = 0; c < clouds.length; c++) {
+        var cl = clouds[c];
+        var cx = ((cl.x + now / 1000 * cl.sp) % (L.w + 160)) - 80;
+        drawCloud(g, cx, cl.y, cl.k);
+      }
+      drawTarget(g, now);
+      drawShots(g);
+      drawLastShotMarkers(g);
+      drawLauncher(g);
+
+      var hud = null;
+      if (flying) {
+        var f = flying;
+        if (f.start === null) f.start = now;
+        var t = Math.min(f.T, (now - f.start) / 1000 * f.rate);
+        var a = rad(f.angle), vx = cfg.v * Math.cos(a), vy = cfg.v * Math.sin(a);
+        var wx = vx * t, wy = Math.max(0, vy * t - 0.5 * G * t * t);
+        f.trail.push({ x: wx, y: wy });
+        // full path so far, faint
+        g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 1.5; g.setLineDash([3, 4]);
+        arcPath(g, f.angle, t); g.stroke(); g.setLineDash([]);
+        // fading trail
+        var tr = f.trail, n = tr.length, start = Math.max(1, n - 26);
+        g.lineCap = 'round';
+        for (var i = start; i < n; i++) {
+          var k = (i - start + 1) / (n - start);
+          g.strokeStyle = 'rgba(255, 196, 92, ' + (k * 0.95).toFixed(3) + ')';
+          g.lineWidth = 1 + k * 6;
+          g.beginPath(); g.moveTo(X(tr[i - 1].x), Y(tr[i - 1].y)); g.lineTo(X(tr[i].x), Y(tr[i].y)); g.stroke();
+        }
+        g.lineCap = 'butt';
+        var bx = X(wx), by = Y(wy);
+        if (by < 4) {
+          g.fillStyle = '#ffd27a';
+          g.beginPath(); g.moveTo(bx, 6); g.lineTo(bx - 7, 16); g.lineTo(bx + 7, 16); g.closePath(); g.fill();
+        } else {
+          var bgr = g.createRadialGradient(bx - 1.5, by - 1.5, 0, bx, by, 7);
+          bgr.addColorStop(0, '#fffbe8'); bgr.addColorStop(0.45, '#ffc15a'); bgr.addColorStop(1, '#e8641c');
+          g.shadowColor = 'rgba(255, 170, 60, 0.9)'; g.shadowBlur = 14;
+          g.fillStyle = bgr; g.beginPath(); g.arc(bx, by, 6, 0, Math.PI * 2); g.fill();
+          g.shadowBlur = 0;
+        }
+        hud = ['t = ' + t.toFixed(2) + ' s', 'x = ' + f1(wx) + ' m   y = ' + f1(wy) + ' m'];
+        if (t >= f.T) land(f);
+      } else if (lastShot) {
+        hud = ['Range ' + f1(lastShot.landing) + ' m', 'Flight time ' + timeOf(cfg.v, lastShot.angle).toFixed(2) + ' s'];
+      } else {
+        hud = ['v = ' + r1(cfg.v) + ' m/s', 'Drag to aim, or use the controls'];
+        if (L.w < 480) hud = ['v = ' + r1(cfg.v) + ' m/s', 'Drag to aim'];
+      }
+      drawHud(g, hud);
+
+      // effects
+      var keep = [];
+      for (var e = 0; e < effects.length; e++) {
+        var fx = effects[e], age = now - fx.t0;
+        if (age < 0) { keep.push(fx); continue; }
+        if (age > fx.life) continue;
+        keep.push(fx);
+        var q = age / fx.life, sec = age / 1000;
+        if (fx.type === 'p') {
+          var px = fx.x + fx.vx * sec, py = fx.y + fx.vy * sec + 0.5 * 260 * sec * sec;
+          if (py > L.groundY + 2) py = L.groundY + 2;
+          g.globalAlpha = 1 - q; dot(g, px, py, 2.6, fx.c); g.globalAlpha = 1;
+        } else if (fx.type === 'ring') {
+          g.strokeStyle = 'rgba(46, 224, 138, ' + (1 - q).toFixed(3) + ')'; g.lineWidth = 3;
+          g.beginPath(); g.ellipse ? g.ellipse(fx.x, L.groundY, 10 + q * 70, 4 + q * 22, 0, 0, Math.PI * 2) : g.arc(fx.x, L.groundY, 10 + q * 60, 0, Math.PI * 2);
+          g.stroke();
+        }
+      }
+      effects = keep;
+    }
+
+    // ---------- aiming by dragging on the field ----------
+    function aimFromEvent(ev) {
+      var rect = cv.getBoundingClientRect();
+      var px = ev.clientX - rect.left, py = ev.clientY - rect.top;
+      var dx = px - L.ox, dy = L.groundY - py;
+      if (dx < 1 && dy < 1) return;
+      var a = Math.atan2(Math.max(0, dy), Math.max(0, dx)) * 180 / Math.PI;
+      setAngle(Math.round(a * 2) / 2);
+    }
+    function onDown(ev) {
+      if (!canAim()) return;
+      dragging = true;
+      if (cv.setPointerCapture && ev.pointerId !== undefined) { try { cv.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ } }
+      aimFromEvent(ev);
+      if (ev.preventDefault) ev.preventDefault();
+    }
+    function onMove(ev) { if (dragging && canAim()) aimFromEvent(ev); }
+    function onUp() { if (dragging) { dragging = false; save(); render(); } }
+    if (window.PointerEvent) {
+      cv.addEventListener('pointerdown', onDown);
+      cv.addEventListener('pointermove', onMove);
+      cv.addEventListener('pointerup', onUp);
+      cv.addEventListener('pointercancel', onUp);
+    } else {
+      cv.addEventListener('mousedown', onDown);
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      cv.addEventListener('touchstart', function (e) { if (e.touches[0]) onDown({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY, preventDefault: function () { e.preventDefault(); } }); }, { passive: false });
+      cv.addEventListener('touchmove', function (e) { if (e.touches[0]) { e.preventDefault(); onMove(e.touches[0]); } }, { passive: false });
+      cv.addEventListener('touchend', onUp);
+    }
+
+    // ---------- control wiring ----------
+    var saveTimer = null;
+    function debouncedSave() { if (saveTimer) clearTimeout(saveTimer); saveTimer = setTimeout(save, 800); }
+    angleRange.addEventListener('input', function () { if (canAim()) { setAngle(parseFloat(angleRange.value)); debouncedSave(); } });
+    angleNum.addEventListener('input', function () {
+      var a = parseFloat(angleNum.value);
+      if (isFinite(a) && canAim()) { setAngle(a, true); debouncedSave(); }
+    });
+    angleNum.addEventListener('change', function () { setAngle(parseFloat(angleNum.value) || 0); });
+    angleNum.addEventListener('keydown', function (e) { if (e.key === 'Enter' && S && S.phase === 'aim') { angleNum.blur(); lockPrediction(); } });
+    function nudge(d) { if (canAim()) { setAngle(S.angle + d); debouncedSave(); } }
+    $('minusBtn').addEventListener('click', function () { nudge(-0.5); });
+    $('plusBtn').addEventListener('click', function () { nudge(0.5); });
+
+    primaryBtn.addEventListener('click', function () {
+      if (!S || flying) return;
+      if (S.phase === 'aim') lockPrediction();
+      else if (S.phase === 'locked') launch('scored');
+      else if (S.phase === 'practice') nextRound();
+    });
+    secondaryBtn.addEventListener('click', function () {
+      if (!S || flying) return;
+      if (S.phase === 'locked') unlock();
+      else if (S.phase === 'practice') launch('practice');
+    });
+    $('submitBtn').addEventListener('click', submit);
+
+    $('formulaBtn').addEventListener('click', function () {
+      var c = $('formulaCard'), on = c.className.indexOf(' on') < 0;
+      c.className = 'formula-card' + (on ? ' on' : '');
+      $('formulaBtn').setAttribute('aria-expanded', on ? 'true' : 'false');
+    });
+
+    // Preview restart (two-click)
+    var restartPending = false, restartTimer = null;
+    function restartPreview() {
+      var b = $('restartBtn');
+      if (!restartPending) {
+        restartPending = true; b.textContent = 'Tap again to restart'; b.className = 'confirm';
+        restartTimer = setTimeout(function () { restartPending = false; b.textContent = 'Restart'; b.className = ''; }, 4000);
+        return;
+      }
+      clearTimeout(restartTimer); restartPending = false; b.textContent = 'Restart'; b.className = '';
+      if (mode === 'preview') startSession('preview', DEFAULTS, null);
+    }
+    $('restartBtn').addEventListener('click', restartPreview);
+    $('againBtn').addEventListener('click', function () { if (mode === 'preview') startSession('preview', DEFAULTS, null); });
+
+    // ---------- start-up: live (Canvas) or preview ----------
+    function startSession(m, rawParams, savedState) {
+      mode = m;
+      flying = null; lastShot = null; effects = []; submitting = false; hideToast();
+      cfg = buildConfig(rawParams);
+      S = newSession(cfg);
+      var restored = savedState ? restore(savedState) : false;
+      L.w = -1;   // force relayout with the (possibly new) settings
+      setAngle(S.angle);
+      $('previewBar').className = 'preview-bar' + (m === 'preview' ? ' on' : '');
+      $('sync').className = 'sync' + (m === 'live' ? ' on' : '');
+      $('results').className = 'results';
+      if (S.phase === 'practice') {
+        var r = S.rounds[S.idx];
+        lastShot = { kind: 'scored', angle: r.predicted, landing: r.landing, ref: r };
+      }
+      render();
+      if (S.phase === 'results') showResults();
+      if (restored) {
+        var nt = $('notice'); nt.className = 'notice on';
+        setTimeout(function () { nt.className = 'notice'; }, 4000);
+      }
+    }
+
+    var liveStarted = false;
+    var previewTimer = setTimeout(function () {
+      if (!liveStarted && !(window.Zest && Zest.isReady && Zest.isReady())) startSession('preview', DEFAULTS, null);
+    }, 1200);
+
+    function startLive() {
+      if (liveStarted) return;
+      liveStarted = true;
+      clearTimeout(previewTimer);
+      var raw = {
+        targets: Zest.getParameter('targets', DEFAULTS.targets),
+        launchSpeed: Zest.getParameter('launchSpeed', DEFAULTS.launchSpeed),
+        tolerance: Zest.getParameter('tolerance', DEFAULTS.tolerance),
+        showGuide: Zest.getParameter('showGuide', DEFAULTS.showGuide)
+      };
+      Zest.onSyncStatus(function (status) {
+        $('syncDot').className = 'sync-dot ' + status;
+        var labels = { synced: 'Saved', dirty: 'Saving soon', syncing: 'Saving…', error: 'Save failed, retrying', expired: 'Reopen from Canvas to keep saving' };
+        $('syncText').textContent = labels[status] || status;
+      });
+      // Leave preview (if it started) before anything else: no preview action can run from here on.
+      S = null; flying = null; hideToast();
+      $('previewBar').className = 'preview-bar';
+      $('results').className = 'results';
+      $('instr').textContent = 'Loading your saved progress…';
+      primaryBtn.disabled = true; secondaryBtn.className = 'btn btn-ghost hidden';
+      Zest.loadState().then(function (st) {
+        startSession('live', raw, st);
+      }, function () {
+        startSession('live', raw, null);
+      });
+    }
+
+    Zest.onReady(function () { startLive(); });
+    window.requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>
