@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review: Projectile Motion Lab</title>
+  <script src="/public/zest-bridge.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 24px;
+      background: #f8f9fa;
+      color: #2d3b45;
+    }
+    .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    h1 { font-size: 20px; color: #0770A2; margin-bottom: 12px; }
+    h2 { font-size: 16px; margin-bottom: 12px; color: #394B58; }
+    p { font-size: 14px; line-height: 1.5; margin-bottom: 6px; }
+    .review-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }
+    .review-table th { background: #f0f7fb; padding: 8px 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #d6eaf4; }
+    .review-table td { padding: 8px 12px; border-bottom: 1px solid #eee; }
+    .ok { color: #27ae60; font-weight: 600; }
+    .bad { color: #c0392b; font-weight: 600; }
+    .muted { color: #666; font-size: 13px; }
+    .chart svg { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Projectile Motion Lab &mdash; Teacher Review</h1>
+    <div id="student-info"></div>
+  </div>
+  <div id="review-content"><p>Loading submission...</p></div>
+
+  <script>
+    (function() {
+      'use strict';
+
+      function esc(s) {
+        var d = document.createElement('div');
+        d.textContent = String(s);
+        return d.innerHTML;
+      }
+      function n1(v) { return Math.round(Number(v) * 10) / 10; }
+      function isNum(v) { return typeof v === 'number' && isFinite(v); }
+
+      Zest.onReady(function() {
+        var out = document.getElementById('review-content');
+        if (!Zest.isReviewMode()) {
+          out.innerHTML = '<div class="card"><p>This page is only available in SpeedGrader review mode.</p></div>';
+          return;
+        }
+        var sub = Zest.getSubmission();
+        if (!sub) {
+          out.innerHTML = '<div class="card"><p>No submission data found.</p></div>';
+          return;
+        }
+        document.getElementById('student-info').innerHTML =
+          '<strong>' + esc(sub.userName || 'Student') + '</strong>' +
+          (sub.submittedAt ? ' &mdash; Submitted ' + esc(new Date(sub.submittedAt).toLocaleString()) : '');
+        render(sub);
+      });
+
+      function chart(a) {
+        var W = 640, H = 120, PL = 30, PR = 20;
+        var range = a.launchSpeed * a.launchSpeed / a.gravity;
+        var xmax = Math.max(range, a.target * 1.1, 1);
+        var i, x, html;
+        function px(v) { return PL + v / xmax * (W - PL - PR); }
+        html = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Landing positions">';
+        html += '<line x1="' + PL + '" y1="80" x2="' + (W - PR) + '" y2="80" stroke="#999" stroke-width="2"/>';
+        html += '<rect x="' + px(a.target - a.tolerance) + '" y="72" width="' + (px(a.target + a.tolerance) - px(a.target - a.tolerance)) +
+                '" height="16" fill="rgba(39,174,96,0.35)"/>';
+        html += '<line x1="' + px(a.target) + '" y1="30" x2="' + px(a.target) + '" y2="80" stroke="#c0392b" stroke-width="2"/>';
+        html += '<text x="' + px(a.target) + '" y="22" text-anchor="middle" font-size="12" fill="#c0392b">Target ' + n1(a.target) + ' m</text>';
+        for (i = 0; i < a.attempts.length; i++) {
+          x = px(Number(a.attempts[i].range));
+          html += '<circle cx="' + x + '" cy="80" r="6" fill="' + (a.attempts[i].hit ? '#27ae60' : '#777') + '"/>';
+          html += '<text x="' + x + '" y="' + (104 + (i % 2) * 0) + '" text-anchor="middle" font-size="11" fill="#2d3b45">' + (i + 1) + '</text>';
+        }
+        html += '</svg>';
+        return html;
+      }
+
+      function render(sub) {
+        var a = sub.artifacts;
+        var out = document.getElementById('review-content');
+        var html = '';
+
+        if (sub.score !== null && sub.score !== undefined) {
+          html += '<div class="card"><h2>Score: ' + esc(sub.score) + ' / ' + esc(sub.maxScore || 100) + '</h2>';
+          if (sub.comment) { html += '<p>' + esc(sub.comment) + '</p>'; }
+          html += '</div>';
+        }
+
+        if (!a || !isNum(a.target) || !isNum(a.launchSpeed) || !isNum(a.gravity) || !a.attempts || !a.attempts.length) {
+          html += '<div class="card"><p>This submission does not include launch details, so only the score is shown.</p></div>';
+          out.innerHTML = html;
+          return;
+        }
+
+        html += '<div class="card"><h2>Setup the student saw</h2>';
+        html += '<p>Target distance: <strong>' + n1(a.target) + ' m</strong> &nbsp; Launch speed: <strong>' + n1(a.launchSpeed) +
+                ' m/s</strong> &nbsp; Gravity: <strong>' + n1(a.gravity) + ' m/s&sup2;</strong> &nbsp; Hit tolerance: <strong>&plusmn;' +
+                n1(a.tolerance) + ' m</strong> &nbsp; Launches allowed: <strong>' + esc(a.maxAttempts) + '</strong></p>';
+        if (a.referenceAngles) {
+          html += '<p class="muted">Correct angles: ' + n1(a.referenceAngles.low) + '&deg; or ' + n1(a.referenceAngles.high) +
+                  '&deg; (R = v&sup2; sin 2&theta; / g). Both land on the target.</p>';
+        }
+        html += '</div>';
+
+        html += '<div class="card"><h2>Launches</h2><table class="review-table"><tr><th>#</th><th>Angle</th><th>Landed at</th><th>Off by</th><th>Result</th></tr>';
+        for (var i = 0; i < a.attempts.length; i++) {
+          var t = a.attempts[i];
+          var off = Number(t.range) - a.target;
+          html += '<tr><td>' + (i + 1) + '</td><td>' + n1(t.angle) + '&deg;</td><td>' + n1(t.range) + ' m</td><td>' +
+                  (off >= 0 ? '+' : '&minus;') + n1(Math.abs(off)) + ' m</td><td class="' + (t.hit ? 'ok">Hit' : 'bad">Miss') + '</td></tr>';
+        }
+        html += '</table></div>';
+
+        html += '<div class="card chart"><h2>Landing positions</h2>' + chart(a) + '</div>';
+        out.innerHTML = html;
+      }
+    })();
+  </script>
+</body>
+</html>

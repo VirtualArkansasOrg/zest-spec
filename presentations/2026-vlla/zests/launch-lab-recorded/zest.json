@@ -1,0 +1,60 @@
+{
+  "zestSpec": "1.0",
+  "name": "Projectile Motion Lab: Hit the Target",
+  "version": "1.0.0",
+  "description": "Students calculate the launch angle that lands a projectile on a target. The teacher sets the target distance. Auto-graded.",
+  "grading": "auto",
+  "mainFile": "index.html",
+  "reviewFile": "review.html",
+  "parameters": [
+    {
+      "key": "targetDistance",
+      "type": "number",
+      "label": "Target distance (m)",
+      "min": 5,
+      "max": 200,
+      "default": 45
+    },
+    {
+      "key": "launchSpeed",
+      "type": "number",
+      "label": "Launch speed (m/s)",
+      "min": 5,
+      "max": 100,
+      "default": 25
+    },
+    {
+      "key": "tolerance",
+      "type": "number",
+      "label": "Hit tolerance (+/- m)",
+      "min": 0.5,
+      "max": 10,
+      "default": 2
+    },
+    {
+      "key": "maxAttempts",
+      "type": "number",
+      "label": "Launches allowed",
+      "min": 1,
+      "max": 10,
+      "default": 3
+    },
+    {
+      "key": "showHints",
+      "type": "boolean",
+      "label": "Show formula hint",
+      "default": true
+    }
+  ],
+  "sandbox": {
+    "allowScripts": true,
+    "allowSameOrigin": true,
+    "allowPopups": false,
+    "allowForms": false,
+    "allowModals": false,
+    "allowTopNavigation": false
+  },
+  "tags": ["physics", "projectile-motion", "kinematics", "lab"],
+  "width": 900,
+  "height": 640
+}

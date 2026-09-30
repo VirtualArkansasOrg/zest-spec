@@ -1,6 +1,6 @@
 import re, subprocess, sys, zipfile, shutil, os
 SK='/root/.claude/skills/synced/79e85875-299b-4d81-bdd3-cbc6df2522d3_e0b34e4f-52d3-4c5e-8e8d-18135e62e58b/pptx/scripts'
-BASES=[1,16,6,7,17,2,12,5,3,19,18,4,4,4,4,8,10,11,13,15,7,2]
+BASES=[1,16,6,7,17,2,12,5,3,17,19,18,4,4,4,4,8,10,11,13,15,7,2]
 shutil.rmtree('un',ignore_errors=True); zipfile.ZipFile('geometric.pptx').extractall('un')
 new=[]
 for b in BASES:

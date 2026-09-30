@@ -27,23 +27,26 @@ Written to match Kyle's past decks (Beyond Chat, The Post-Star Trek Education) a
 | 2 | About Me | 0:45 | 1:00 |
 | 3 | Are You Using AI to Build Interactives? | 1:00 | 2:00 |
 | 4 | One Sentence | 1:00 | 3:00 |
-| 5 | Let's Watch | 3:00 | 6:00 |
-| 6 | So What's the Catch? | 1:15 | 7:15 |
-| 7 | What is Zest? | 1:45 | 9:00 |
-| 8 | How It Started | 1:00 | 10:00 |
-| 9 | Keyboarding Practice (live demo) | 3:00 | 13:00 |
-| 10 | One Package, Lots of Courses | 1:00 | 14:00 |
-| 11 | What Else Can You Make? | 0:20 | 14:20 |
-| 12-15 | Four zests, about 1:10 each | 4:40 | 19:00 |
-| 16 | Why Build It Ourselves? | 0:45 | 19:45 |
-| 17 | Share Them With Other Programs | 1:30 | 21:15 |
-| 18 | Challenges | 0:45 | 22:00 |
-| 19 | Can You Trust What the AI Made? | 1:15 | 23:15 |
-| 20 | What's Next | 0:45 | 24:00 |
-| 21 | Want the Code? | 0:45 | 24:45 |
-| 22 | Questions | 5:00 | 30:00 |
+| 5 | Let's Watch (build recording, 1:41) | 2:30 | 5:30 |
+| 6 | So What's the Catch? | 1:15 | 6:45 |
+| 7 | What is Zest? | 1:45 | 8:30 |
+| 8 | How It Started | 1:00 | 9:30 |
+| 9 | Keyboarding Practice (live demo) | 3:00 | 12:30 |
+| 10 | A Custom View in SpeedGrader | 1:00 | 13:30 |
+| 11 | One Package, Lots of Courses | 1:00 | 14:30 |
+| 12 | What Else Can You Make? | 0:20 | 14:50 |
+| 13-16 | Four zests, 1:05 each (click shows the SpeedGrader view) | 4:20 | 19:10 |
+| 17 | Why Build It Ourselves? | 0:45 | 19:55 |
+| 18 | Share Them With Other Programs | 1:30 | 21:25 |
+| 19 | Challenges | 0:45 | 22:10 |
+| 20 | Can You Trust What the AI Made? | 1:15 | 23:25 |
+| 21 | What's Next | 0:45 | 24:10 |
+| 22 | Want the Code? | 0:45 | 24:55 |
+| 23 | Questions | 5:00 | 30:00 |
 
-About 15 seconds of slack. If I'm running long, show two of the four zests and skip to slide 16.
+About 5 seconds of slack. If running long, show two of the four zests.
+
+Draft 6 changes: click-to-reveal animations on most slides; a new slide 10 on the custom SpeedGrader view; each zest slide reveals its SpeedGrader page on click; slide 4 shows what the one-sentence recorded run actually produced.
 
 ## Slides
 

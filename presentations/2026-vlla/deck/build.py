@@ -105,8 +105,70 @@ def centered(slide, path, cx, cy, max_w, max_h, border=None):
     return picture(slide, path, cx - w / 2, cy - h / 2, w, h, border)
 
 
+
+# ---------------------------------------------------------------- animations
+# REVEAL[slide index] = list of clicks; each click is a list of shape ids that
+# fade in together when the presenter clicks.
+REVEAL = []
+
+
+def ids(*shapes):
+    return [sh if isinstance(sh, int) else sh.shape_id for sh in shapes]
+
+
+def add_timing(slide, clicks):
+    from lxml import etree
+    ns = 'http://schemas.openxmlformats.org/presentationml/2006/main'
+    n = [2]
+
+    def nid():
+        n[0] += 1
+        return str(n[0])
+
+    pars = []
+    for click in clicks:
+        effects = []
+        for k, spid in enumerate(click):
+            kind = 'clickEffect' if k == 0 else 'withEffect'
+            effects.append(
+                '<p:par><p:cTn id="%s" presetID="10" presetClass="entr" presetSubtype="0" fill="hold" nodeType="%s">'
+                '<p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>'
+                '<p:set><p:cBhvr><p:cTn id="%s" dur="1" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst></p:cTn>'
+                '<p:tgtEl><p:spTgt spid="%d"/></p:tgtEl><p:attrNameLst><p:attrName>style.visibility</p:attrName></p:attrNameLst>'
+                '</p:cBhvr><p:to><p:strVal val="visible"/></p:to></p:set>'
+                '<p:animEffect transition="in" filter="fade"><p:cBhvr><p:cTn id="%s" dur="500"/>'
+                '<p:tgtEl><p:spTgt spid="%d"/></p:tgtEl></p:cBhvr></p:animEffect>'
+                '</p:childTnLst></p:cTn></p:par>' % (nid(), kind, nid(), spid, nid(), spid))
+        pars.append(
+            '<p:par><p:cTn id="%s" fill="hold"><p:stCondLst><p:cond delay="indefinite"/></p:stCondLst><p:childTnLst>'
+            '<p:par><p:cTn id="%s" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>%s'
+            '</p:childTnLst></p:cTn></p:par></p:childTnLst></p:cTn></p:par>' % (nid(), nid(), ''.join(effects)))
+    xml = ('<p:timing xmlns:p="%s"><p:tnLst><p:par><p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot">'
+           '<p:childTnLst><p:seq concurrent="1" nextAc="seek"><p:cTn id="2" dur="indefinite" nodeType="mainSeq">'
+           '<p:childTnLst>%s</p:childTnLst></p:cTn>'
+           '<p:prevCondLst><p:cond evt="onPrev" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:prevCondLst>'
+           '<p:nextCondLst><p:cond evt="onNext" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:nextCondLst>'
+           '</p:seq></p:childTnLst></p:cTn></p:par></p:tnLst></p:timing>') % (ns, ''.join(pars))
+    el = etree.fromstring(xml)
+    root = slide._element
+    for old in root.findall('{%s}timing' % ns):
+        root.remove(old)
+    ext = root.find('{%s}extLst' % ns)
+    if ext is not None:
+        ext.addprevious(el)
+    else:
+        root.append(el)
+
+
+def fade_steps(s, clicks):
+    REVEAL.append((s, clicks))
+
+
+# ---------------------------------------------------------------- slides
+i = 0
+
 # 1. Title (base 1)
-s = S[0]
+s = S[i]
 remove(s, {183})
 title(s, 0.56, 0.62, 6.6, 1.0, 'From PhET to Keyboarding', size=40)
 text(s, 0.56, 1.55, 6.4, 0.8,
@@ -118,7 +180,8 @@ text(s, 0.56, 4.25, 6.5, 0.9,
      size=12, color=WHITE)
 
 # 2. About Me (base 16)
-s = S[1]
+i += 1
+s = S[i]
 remove(s, {545, 546, 542})
 title(s, 0.58, 0.75, 4.5, 0.6, 'About Me', size=34)
 text(s, 0.58, 1.55, 4.8, 2.6, [
@@ -138,28 +201,35 @@ r.font.size = Pt(12)
 r.font.color.rgb = GRAY
 
 # 3. Are You Using AI to Build Interactives? (base 6)
-s = S[2]
+i += 1
+s = S[i]
 remove(s, {287, 290, 293})
 title(s, 0.56, 0.42, 8.8, 0.7, 'Are You Using AI to Build Interactives?', size=28)
 text(s, 0.88, 2.25, 3.8, 1.6, [
     ('Show of hands', {'font': HEAD, 'bold': True, 'size': 20}),
     'Who is using AI to build their own simulations, games or practice tools?'], size=13)
-text(s, 5.32, 2.25, 3.8, 1.6, [
+t2 = text(s, 5.32, 2.25, 3.8, 1.6, [
     ('Now grade it', {'font': HEAD, 'bold': True, 'size': 20}),
     'Keep your hand up if it puts a grade in your gradebook.'], size=13, color=WHITE)
+fade_steps(s, [ids(289, t2)])
 
-# 4. One Sentence (base 7)
-s = S[3]
+# 4. One Sentence (base 7): the result of the recorded run, revealed on click
+i += 1
+s = S[i]
 remove(s, {310})
-centered(s, MEDIA + 'launch-lab-phone.png', 0.56 + 4.17 / 2, 0.56 + 4.5 / 2, 3.9, 4.2)
+p4 = centered(s, MEDIA + 'build-recording-result.png', 0.56 + 4.17 / 2, 0.56 + 4.5 / 2, 3.95, 4.2)
 title(s, 5.3, 0.75, 4.2, 0.6, 'One Sentence', size=32, color=WHITE)
-text(s, 5.3, 1.55, 4.1, 2.4, [
+text(s, 5.3, 1.55, 4.1, 2.0, [
     ('“Make a projectile motion lab where students predict the launch angle to hit a target, '
-     'auto-graded, with the target distance set by the teacher.”', {'italic': True, 'size': 16}),
-    ('That is all the teacher typed.', {'size': 12, 'space': 0})], size=16, color=WHITE, space=14)
+     'auto-graded, with the target distance set by the teacher.”', {'italic': True, 'size': 16})],
+     size=16, color=WHITE)
+t4 = text(s, 5.3, 3.35, 4.1, 0.8, ['That is all the teacher typed. About three minutes later, this.'],
+          size=12, color=WHITE)
+fade_steps(s, [ids(p4, t4)])
 
 # 5. Let's Watch (base 17, cards removed)
-s = S[4]
+i += 1
+s = S[i]
 remove(s, {562, 563, 564, 565, 566, 567})
 title(s, 0.56, 0.3, 6, 0.55, "Let's Watch", size=28, color=WHITE)
 poster = MEDIA + 'build-recording-poster.png'
@@ -167,52 +237,64 @@ if os.path.exists(poster):
     centered(s, poster, 5.0, 3.0, 7.6, 4.1, border=CYAN)
 else:
     placeholder(s, 1.2, 1.0, 7.6, 4.1, 'Build recording (video goes here)')
-text(s, 7.2, 0.4, 2.3, 0.4, ['Sped up'], size=11, color=CYAN, align=PP_ALIGN.RIGHT)
+text(s, 6.2, 0.4, 3.3, 0.4, ['Real run, sped up'], size=11, color=CYAN, align=PP_ALIGN.RIGHT)
 
-# 6. So What's the Catch? (base 2)
-s = S[5]
+# 6. So What's the Catch? (base 2): one problem per click
+i += 1
+s = S[i]
 remove(s, {194, 198})
-text(s, 1.1, 1.05, 3.85, 3.7, [
-    ('No grade in the gradebook', {'font': HEAD, 'bold': True, 'size': 23, 'space': 3}),
-    ('Someone copies scores by hand, or it does not count', {'space': 22}),
-    ('No record of the work', {'font': HEAD, 'bold': True, 'size': 23, 'space': 3}),
-    ('The teacher cannot see what the student did', {'space': 22}),
-    ('Another login', {'font': HEAD, 'bold': True, 'size': 23, 'space': 3}),
-    ('Or another vendor, with another contract', {'space': 0}),
-], size=14, color=GRAY)
+steps = []
+for k, (h, b) in enumerate([('No grade in the gradebook', 'Someone copies scores by hand, or it does not count'),
+                            ('No record of the work', 'The teacher cannot see what the student did'),
+                            ('Another login', 'Or another vendor, with another contract')]):
+    steps.append(ids(text(s, 1.1, 1.05 + k * 1.22, 3.85, 1.1,
+                          [(h, {'font': HEAD, 'bold': True, 'size': 23, 'space': 3}), b], size=14, color=GRAY)))
 title(s, 6.0, 0.8, 3.4, 1.2, "So What's the Catch?", size=30, color=WHITE)
-text(s, 6.0, 2.1, 3.3, 1.2, ['An interactive on its own is just a web page.'], size=15, color=WHITE)
+t6 = text(s, 6.0, 2.1, 3.3, 1.2, ['An interactive on its own is just a web page.'], size=15, color=WHITE)
+fade_steps(s, steps + [ids(t6)])
 
-# 7. What is Zest? (base 12)
-s = S[6]
+# 7. What is Zest? (base 12): one box per click
+i += 1
+s = S[i]
 remove(s, {431, 439, 442, 445})
 title(s, 0.56, 0.45, 7.5, 0.6, 'What is Zest?', size=32)
 text(s, 0.56, 1.15, 8.0, 0.9, [
     'An LTI 1.3 tool we built at Virtual Arkansas. Any HTML/JavaScript interactive becomes a '
     'Canvas assignment, auto-graded or teacher-graded, or a live element on a page.'], size=13, color=GRAY)
-for i, (h, b) in enumerate([
+cards7 = [434, 436, 438]
+arrows7 = [None, 451, 448]
+steps = []
+for k, (h, b) in enumerate([
         ('In Canvas', 'The teacher clicks Embed Interactive Content and picks or uploads a zest'),
         ('Zest', 'Runs the activity from your own server and saves work as the student goes'),
-        ('Back in Canvas', 'The grade lands in the gradebook and the work shows in SpeedGrader')]):
-    x = 0.56 + i * 3.06
-    text(s, x + 0.3, 2.85, 2.2, 1.9, [(h, {'font': HEAD, 'bold': True, 'size': 17, 'color': NAVY}), b],
-         size=12, color=BLACK)
+        ('Back in Canvas', 'The grade lands in the gradebook and the teacher gets a custom view in SpeedGrader')]):
+    x = 0.56 + k * 3.06
+    t = text(s, x + 0.3, 2.85, 2.2, 1.9, [(h, {'font': HEAD, 'bold': True, 'size': 17, 'color': NAVY}), b],
+             size=12, color=BLACK)
+    steps.append([cards7[k], t.shape_id] + ([arrows7[k]] if arrows7[k] else []))
+fade_steps(s, steps)
 
-# 8. How It Started (base 5)
-s = S[7]
+# 8. How It Started (base 5): one step per click
+i += 1
+s = S[i]
 remove(s, {256, 262, 263, 267, 271, 272, 273})
 title(s, 1.0, 1.35, 3.5, 0.6, 'How It Started', size=30)
 text(s, 1.0, 2.05, 3.3, 1.6, [
     'We built Zest for our own courses first, one need at a time.'], size=13, color=GRAY)
-for i, (step, label) in enumerate([('1', 'Coding tools to replace an expensive system'),
+pills = [259, 264, 268]
+steps = []
+for k, (step, label) in enumerate([('1', 'Coding tools to replace an expensive system'),
                                    ('2', 'Our keyboarding class'),
                                    ('3', 'More on the way')]):
-    y = 1.2 + i * 1.03
-    text(s, 5.5, y + 0.23, 0.6, 0.3, ['Step ' + step], size=11, color=WHITE, bold=True)
-    text(s, 6.55, y + 0.14, 2.35, 0.5, [label], size=12, color=BLACK, anchor=MSO_ANCHOR.MIDDLE)
+    y = 1.2 + k * 1.03
+    a = text(s, 5.5, y + 0.23, 0.6, 0.3, ['Step ' + step], size=11, color=WHITE, bold=True)
+    b = text(s, 6.55, y + 0.14, 2.35, 0.5, [label], size=12, color=BLACK, anchor=MSO_ANCHOR.MIDDLE)
+    steps.append([pills[k], a.shape_id, b.shape_id])
+fade_steps(s, steps)
 
 # 9. Keyboarding Practice (base 3)
-s = S[8]
+i += 1
+s = S[i]
 remove(s, {216, 220})
 text(s, 1.1, 1.05, 3.9, 3.6, [
     ('1. Teacher', {'font': HEAD, 'bold': True, 'size': 16, 'color': NAVY, 'space': 1}),
@@ -220,27 +302,61 @@ text(s, 1.1, 1.05, 3.9, 3.6, [
     ('2. Student', {'font': HEAD, 'bold': True, 'size': 16, 'color': NAVY, 'space': 1}),
     ('Types and submits. The grade shows up in the gradebook.', {'space': 9}),
     ('3. Teacher', {'font': HEAD, 'bold': True, 'size': 16, 'color': NAVY, 'space': 1}),
-    ('Opens SpeedGrader and sees what the student typed', {'space': 9}),
+    ('Opens SpeedGrader and sees the keyboarding review, not a file', {'space': 9}),
     ('4. Student, another device', {'font': HEAD, 'bold': True, 'size': 16, 'color': NAVY, 'space': 1}),
     ('The work is still there', {'space': 0}),
 ], size=12, color=BLACK)
 title(s, 6.0, 0.8, 3.4, 1.2, 'Keyboarding Practice', size=30, color=WHITE)
 text(s, 6.0, 2.1, 3.3, 0.8, ['Live demo'], size=16, color=CYAN, bold=True)
 
-# 10. One Package, Lots of Courses (base 19)
-s = S[9]
+# 10. A Custom View in SpeedGrader (base 17, cards removed): cascade, one example per click
+i += 1
+s = S[i]
+remove(s, {562, 563, 564, 565, 566, 567})
+title(s, 0.56, 0.3, 8.8, 0.6, 'A Custom View in SpeedGrader', size=30, color=WHITE)
+text(s, 0.56, 0.92, 8.6, 0.6, [
+    'Each zest brings its own page for the teacher. SpeedGrader shows the actual work, not a file or a link.'],
+     size=13, color=WHITE)
+steps = []
+for k, (slug, label) in enumerate([('launch-lab', 'Launch Lab: every shot, on one field'),
+                                   ('graph-match', 'Graph Match: their curve over the target'),
+                                   ('sketch-label', 'Sketch & Label: replay of the drawing'),
+                                   ('escape-the-archive', 'Escape the Archive: every wrong try and hint')]):
+    x = 0.9 + k * 1.3
+    y = 1.85 + k * 0.28
+    pic = picture(s, MEDIA + slug + '-review.png', x, y, 4.3, None, border=CYAN)
+    tag = box(s, x, y - 0.3, 3.6, 0.3, NAVY)
+    tf = tag.text_frame
+    tf.margin_top = tf.margin_bottom = 0
+    r = tf.paragraphs[0].add_run()
+    r.text = label
+    r.font.name = BODY
+    r.font.size = Pt(10)
+    r.font.bold = True
+    r.font.color.rgb = WHITE
+    steps.append(ids(pic, tag))
+fade_steps(s, steps)
+
+# 11. One Package, Lots of Courses (base 19): one card per click
+i += 1
+s = S[i]
 remove(s, {586, 598, 602, 606})
 title(s, 0.56, 1.8, 2.9, 2.0, 'One Package, Lots of Courses', size=28, color=WHITE)
-for i, (h, b) in enumerate([
+cards11 = [597, 601, 605]
+steps = []
+for k, (h, b) in enumerate([
         ('Set it up per course', 'A different passage for each class, from the same zest'),
         ('Fix it once, update every copy', 'No broken links and no lost student work'),
         ('Works on managed Chromebooks', 'Even when third-party cookies are blocked')]):
-    y = 0.31 + i * 1.79
-    text(s, 4.55, y + 0.3, 5.0, 0.95, [(h, {'font': HEAD, 'bold': True, 'size': 17, 'space': 3}), b],
-         size=12, color=WHITE)
+    y = 0.31 + k * 1.79
+    t = text(s, 4.55, y + 0.3, 5.0, 0.95, [(h, {'font': HEAD, 'bold': True, 'size': 17, 'space': 3}), b],
+             size=12, color=WHITE)
+    steps.append([cards11[k], t.shape_id])
+fade_steps(s, steps)
 
-# 11. What Else Can You Make? (base 18, four cards)
-s = S[10]
+# 12. What Else Can You Make? (base 18, four cards)
+i += 1
+s = S[i]
 cards = [(0.68, 0.37), (5.40, 0.37), (0.68, 2.92), (5.40, 2.92)]
 shots = [('launch-lab-desktop.png', 'Launch Lab', 'Physics'),
          ('graph-match-desktop.png', 'Graph Match', 'Algebra 2'),
@@ -251,12 +367,12 @@ for (cx, cy), (img, name, subj) in zip(cards, shots):
     text(s, cx + 2.9, cy + 0.3, 1.05, 1.7, [(name, {'font': HEAD, 'bold': True, 'size': 14, 'space': 4}),
                                            (subj, {'size': 10, 'color': GRAY})], size=12)
 
-# 12-15. The four zests (base 4)
+# 13-16. The four zests (base 4): click to show the teacher's SpeedGrader view
 ZESTS = [
     ('launch-lab', 'Launch Lab', 'Physics  |  Auto-graded',
      'Make a projectile motion lab where students predict the launch angle to hit a target, '
      'auto-graded, with the target distance set by the teacher.',
-     'The teacher sets the targets. SpeedGrader shows every shot.'),
+     'Same sentence as before, plus a few answers about rounds and practice shots.'),
     ('graph-match', 'Graph Match', 'Algebra 2  |  Auto-graded',
      'Build a function transformations game for Algebra 2: students drag sliders to make their graph '
      'match a target curve. Auto-graded, and I want to pick the target functions myself.',
@@ -265,16 +381,17 @@ ZESTS = [
      'Students label a plant cell by drawing arrows and writing the names of the parts right on the '
      'diagram, then explain in a sentence what the chloroplast does. I’ll grade it myself, and in '
      'SpeedGrader I want to see their drawing and watch how they drew it.',
-     'In SpeedGrader you can replay the drawing stroke by stroke.'),
+     'Students can draw with a finger on a phone or tablet.'),
     ('escape-the-archive', 'Escape the Archive', 'U.S. History  |  Auto-graded',
      'Create a digital escape room for U.S. History where students unlock four locks using clues from '
      'primary sources, one of them about the Little Rock Nine. Auto-graded, with hints I can turn off.',
-     'SpeedGrader shows every wrong try and hint on a timeline.'),
+     'Hints cost points. The teacher can turn them off or set a time limit.'),
 ]
-for i, (slug, name, sub, prompt, extra) in enumerate(ZESTS):
-    s = S[11 + i]
+for k, (slug, name, sub, prompt, extra) in enumerate(ZESTS):
+    i += 1
+    s = S[i]
     remove(s, {238, 246})
-    centered(s, MEDIA + slug + '-desktop.png', 2.55, 2.55, 4.5, 3.3, border=RGBColor(0xCC, 0xCC, 0xCC))
+    centered(s, MEDIA + slug + '-desktop.png', 2.45, 2.3, 4.4, 3.0, border=RGBColor(0xCC, 0xCC, 0xCC))
     title(s, 5.3, 0.45, 4.2, 0.55, name, size=26)
     text(s, 5.3, 1.0, 4.2, 0.3, [sub], size=11, color=RED, bold=True)
     small = len(prompt) > 200
@@ -283,77 +400,106 @@ for i, (slug, name, sub, prompt, extra) in enumerate(ZESTS):
          size=12)
     text(s, 5.3, 3.5, 2.9, 0.8, [extra], size=11, color=NAVY)
     placeholder(s, 8.35, 3.35, 1.05, 1.05, 'QR code\n(link coming)')
+    # the teacher's view, on click
+    rv = picture(s, MEDIA + slug + '-review.png', 1.95, 2.35, 3.2, None, border=NAVY)
+    tag = box(s, 1.95, 2.02, 2.55, 0.3, NAVY)
+    tf = tag.text_frame
+    tf.margin_top = tf.margin_bottom = 0
+    r = tf.paragraphs[0].add_run()
+    r.text = 'What the teacher sees in SpeedGrader'
+    r.font.name = BODY
+    r.font.size = Pt(9.5)
+    r.font.bold = True
+    r.font.color.rgb = WHITE
+    fade_steps(s, [ids(rv, tag)])
 
-# 16. Why Build It Ourselves? (base 8)
-s = S[15]
+# 17. Why Build It Ourselves? (base 8): one reason per click
+i += 1
+s = S[i]
 remove(s, {325, 330, 333})
 title(s, 0.56, 0.55, 7.5, 0.6, 'Why Build It Ourselves?', size=30)
-text(s, 0.56, 2.55, 4.2, 1.8, [
-    ('Grades inside Canvas', {'font': HEAD, 'bold': True, 'size': 18, 'space': 2}),
-    ('Not in another tool', {'space': 12}),
-    ('Our data, our server', {'font': HEAD, 'bold': True, 'size': 18, 'space': 2}),
-    ('Student work stays with us', {'space': 0})], size=12, color=WHITE)
-text(s, 5.64, 2.55, 3.8, 1.8, [
-    ('No per-seat license', {'font': HEAD, 'bold': True, 'size': 18, 'space': 2}),
-    ('Add students without a new contract', {'space': 12}),
-    ('Content needed a home', {'font': HEAD, 'bold': True, 'size': 18, 'space': 2}),
-    ('We already had it', {'space': 0})], size=12, color=WHITE)
+steps = []
+for (x, y), (h, b) in zip([(0.56, 2.45), (0.56, 3.35), (5.64, 2.45), (5.64, 3.35)], [
+        ('Grades inside Canvas', 'Not in another tool'),
+        ('Our data, our server', 'Student work stays with us'),
+        ('No per-seat license', 'Add students without a new contract'),
+        ('Content needed a home', 'We already had it')]):
+    steps.append(ids(text(s, x, y, 3.9, 0.85, [(h, {'font': HEAD, 'bold': True, 'size': 18, 'space': 2}), b],
+                          size=12, color=WHITE)))
+fade_steps(s, steps)
 
-# 17. Share Them With Other Programs (base 10)
-s = S[16]
+# 18. Share Them With Other Programs (base 10): second card on click
+i += 1
+s = S[i]
 remove(s, {388, 389, 390, 391, 392, 393, 396, 397})
 text(s, 1.0, 0.95, 3.35, 3.8, [
     ('One File', {'font': HEAD, 'bold': True, 'size': 28, 'color': RED, 'space': 10}),
     ('A zest is a single file', {'space': 14}),
     ('Any program running Zest can upload it', {'space': 14}),
     ('Your keyboarding activity can be my keyboarding activity', {'space': 0})], size=15, color=BLACK)
-text(s, 5.7, 0.95, 3.35, 3.8, [
+t18 = text(s, 5.7, 0.95, 3.35, 3.8, [
     ('Written Down', {'font': HEAD, 'bold': True, 'size': 28, 'color': CYAN, 'space': 10}),
     ('The package format is a published specification', {'space': 14}),
     ('The zest-creator template is public', {'space': 14}),
     ('Picture a shared library of gradable activities across programs', {'space': 0})], size=15, color=WHITE)
+fade_steps(s, [ids(387, t18)])
 
-# 18. Challenges (base 11)
-s = S[17]
+# 19. Challenges (base 11): one per click
+i += 1
+s = S[i]
 remove(s, {405, 408, 411, 414, 417})
 title(s, 0.56, 0.55, 2.9, 0.7, 'Challenges', size=30, color=WHITE)
 text(s, 0.56, 1.35, 2.9, 1.5, ['What took the most work'], size=13, color=WHITE)
+steps = []
 for (x, y), (h, b) in zip([(4.43, 0.6), (7.25, 0.6), (4.43, 2.5), (7.25, 2.5)], [
         ('LTI and Canvas', 'Most of the work. Again.'),
         ('Canvas quirks', 'Pop-up alerts are blocked in assignments, and the frames can’t resize'),
         ('Chromebooks', 'Launches had to work with third-party cookies blocked'),
         ('Never lose student work', 'Every change is tested with fake teachers, students and admins')]):
-    text(s, x, y, 2.2, 1.7, [(h, {'font': HEAD, 'bold': True, 'size': 16, 'space': 4}), b], size=12, color=BLACK)
+    steps.append(ids(text(s, x, y, 2.2, 1.7, [(h, {'font': HEAD, 'bold': True, 'size': 16, 'space': 4}), b],
+                          size=12, color=BLACK)))
+fade_steps(s, steps)
 
-# 19. Can You Trust What the AI Made? (base 13)
-s = S[18]
+# 20. Can You Trust What the AI Made? (base 13): one card per click
+i += 1
+s = S[i]
 remove(s, {464, 465, 466, 467})
 title(s, 1.3, 0.6, 7.4, 0.6, 'Can You Trust What the AI Made?', size=28, color=WHITE, align=PP_ALIGN.CENTER)
 text(s, 1.3, 1.25, 7.4, 0.5, ['What checks it, and what still needs a person'],
      size=13, color=WHITE, align=PP_ALIGN.CENTER)
-for i, (h, b) in enumerate([
+cards20 = [461, 462, 463]
+steps = []
+for k, (h, b) in enumerate([
         ('Checked', 'Every package is checked when it’s built. A separate review looks for anything that sends data out or tracks students.'),
         ('Sandboxed', 'Zest runs every package in a sandbox, with permissions off by default.'),
         ('Still a person’s job', 'Test it as a student. Have a subject expert check it. Use teacher grading for high stakes.')]):
-    x = 0.72 + i * 2.9
-    text(s, x + 0.22, 2.55, 2.32, 2.2, [(h, {'font': HEAD, 'bold': True, 'size': 18, 'color': NAVY, 'space': 8}), b],
-         size=13, color=BLACK)
+    x = 0.72 + k * 2.9
+    t = text(s, x + 0.22, 2.55, 2.32, 2.2, [(h, {'font': HEAD, 'bold': True, 'size': 18, 'color': NAVY, 'space': 8}), b],
+             size=13, color=BLACK)
+    steps.append([cards20[k], t.shape_id])
+fade_steps(s, steps)
 
-# 20. What's Next (base 15)
-s = S[19]
+# 21. What's Next (base 15): one item per click
+i += 1
+s = S[i]
 remove(s, {511, 514, 526, 529, 532})
 title(s, 0.56, 0.6, 3.6, 0.6, "What's Next", size=30)
 text(s, 0.56, 1.3, 3.4, 1.2, ['Where Zest goes from here'], size=13, color=GRAY)
-for i, (h, b) in enumerate([
+dots = [(518, 522), (519, 523), (520, 524), (521, 525)]
+steps = []
+for k, (h, b) in enumerate([
         ('Release the server code', 'MIT license'),
         ('A separate domain for packages', 'The next security step'),
         ('Accessibility review', 'No WCAG claims yet'),
         ('Other LMSs', 'Researched Brightspace, Schoology and Buzz')]):
-    y = 0.68 + i * 1.19
-    text(s, 5.75, y, 3.7, 0.7, [(h, {'font': HEAD, 'bold': True, 'size': 15, 'space': 1}), b], size=11, color=GRAY)
+    y = 0.68 + k * 1.19
+    t = text(s, 5.75, y, 3.7, 0.7, [(h, {'font': HEAD, 'bold': True, 'size': 15, 'space': 1}), b], size=11, color=GRAY)
+    steps.append([dots[k][0], dots[k][1], t.shape_id])
+fade_steps(s, steps)
 
-# 21. Want the Code? (base 7)
-s = S[20]
+# 22. Want the Code? (base 7)
+i += 1
+s = S[i]
 remove(s, {310})
 placeholder(s, 1.05, 1.2, 3.2, 3.2, 'QR code for the Google Form\n[FORM URL PLACEHOLDER]')
 title(s, 5.3, 0.75, 4.2, 0.6, 'Want the Code?', size=32, color=WHITE)
@@ -367,15 +513,25 @@ text(s, 5.3, 1.55, 4.1, 2.9, [
 text(s, 5.3, 4.35, 3.0, 0.5, ['“Zest” and “Zestable” are trademarks of Virtual Arkansas (applications pending).'],
      size=8, color=WHITE)
 
-# 22. Questions (base 2)
-s = S[21]
+# 23. Questions (base 2)
+i += 1
+s = S[i]
 remove(s, {194, 198})
 placeholder(s, 1.4, 1.2, 3.2, 3.2, 'Same QR code\n[FORM URL PLACEHOLDER]')
 title(s, 6.0, 1.4, 3.4, 1.0, 'Questions?', size=36, color=WHITE)
 text(s, 6.0, 2.4, 3.3, 1.0, ['kyle.yancey@virtualarkansas.org'], size=13, color=WHITE)
 
-for i, sl in enumerate(S, 1):
-    sl.notes_slide.notes_text_frame.text = NOTES[i]
+assert i == len(S) - 1, (i, len(S))
+
+for slide, clicks in REVEAL:
+    present = {sh.shape_id for sh in slide.shapes}
+    for click in clicks:
+        for spid in click:
+            assert spid in present, (spid, 'missing on slide')
+    add_timing(slide, clicks)
+
+for n, sl in enumerate(S, 1):
+    sl.notes_slide.notes_text_frame.text = NOTES[n]
 
 prs.save('zest-vlla-2026.pptx')
-print('saved')
+print('saved', len(S), 'slides;', sum(len(c) for _, c in REVEAL), 'clicks')
