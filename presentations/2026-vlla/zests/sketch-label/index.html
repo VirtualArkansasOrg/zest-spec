@@ -836,13 +836,23 @@
         overlayG.innerHTML = editId !== null ? '' :
           '<circle cx="' + pt.x + '" cy="' + pt.y + '" r="9" fill="#2e7d32" opacity="0.25"><animate attributeName="r" values="7;15;7" dur="1.4s" repeatCount="indefinite"/></circle>' +
           '<circle cx="' + pt.x + '" cy="' + pt.y + '" r="4.5" fill="#2e7d32"/>';
-        // keep the tapped point visible: put the bar at the bottom if the tap was near the top
-        var rect = board.getBoundingClientRect();
+        // keep the tapped point visible: on a wide stage float the bar beside the point,
+        // on a narrow one use the full width at the top or bottom
         var stageRect = byId('stage').getBoundingClientRect();
         var m = board.getScreenCTM();
-        var screenY = m ? pt.y * m.d + m.f : rect.top;
-        if (screenY - stageRect.top < 120 && stageRect.height > 220) { labelbar.style.top = 'auto'; labelbar.style.bottom = '8px'; }
-        else { labelbar.style.top = '8px'; labelbar.style.bottom = 'auto'; }
+        var sx = m ? pt.x * m.a + m.e - stageRect.left : 0, sy = m ? pt.y * m.d + m.f - stageRect.top : 0;
+        var st = labelbar.style;
+        if (stageRect.width >= 560) {
+          var bw = 360, bh = labelbar.offsetHeight || 96;
+          st.width = bw + 'px'; st.right = 'auto';
+          st.left = Math.round(Math.max(8, Math.min(stageRect.width - bw - 8, sx - bw / 2))) + 'px';
+          var top = sy < stageRect.height / 2 ? sy + 26 : sy - bh - 26;
+          st.top = Math.round(Math.max(8, Math.min(stageRect.height - bh - 8, top))) + 'px'; st.bottom = 'auto';
+        } else {
+          st.width = 'auto'; st.left = '8px'; st.right = '8px';
+          if (sy < 120 && stageRect.height > 220) { st.top = 'auto'; st.bottom = '8px'; }
+          else { st.top = '8px'; st.bottom = 'auto'; }
+        }
         setTimeout(function () { try { lbInput.focus({ preventScroll: true }); } catch (e) { lbInput.focus(); } }, 30);
       }
 
