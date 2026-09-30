@@ -393,7 +393,7 @@
       }
 
       function labelSvg(id, x, y, s, c, extra) {
-        return '<text data-id="' + id + '" x="' + num(x) + '" y="' + (num(y) + 8.5) + '" text-anchor="middle" font-family="' + esc(LABEL_FONT) +
+        return '<text data-id="' + esc(id) + '" x="' + num(x) + '" y="' + (num(y) + 8.5) + '" text-anchor="middle" font-family="' + esc(LABEL_FONT) +
           '" font-size="24" font-weight="700" fill="' + c + '" stroke="#ffffff" stroke-width="5" stroke-linejoin="round" paint-order="stroke"' +
           (extra || '') + '>' + esc(s) + '</text>';
       }
@@ -449,13 +449,13 @@
               while (m < n && num(it.t) + num(it.p[m * 3 + 2]) <= T) m++;
               n = m;
             }
-            if (n > 0) out.push('<path data-id="' + it.id + '" d="' + penPath(it.p, n) + '" fill="none" stroke="' + c +
+            if (n > 0) out.push('<path data-id="' + esc(it.id) + '" d="' + penPath(it.p, n) + '" fill="none" stroke="' + c +
               '" stroke-width="' + num(it.w, 3) + '" stroke-linecap="round" stroke-linejoin="round"/>');
           } else if (it.k === 'arrow') {
             var f = 1;
             if (T !== Infinity && num(it.d) > 0) f = Math.max(0, Math.min(1, (T - num(it.t)) / num(it.d)));
             var x1 = num(it.x1), y1 = num(it.y1);
-            out.push(arrowSvg(x1, y1, x1 + (num(it.x2) - x1) * f, y1 + (num(it.y2) - y1) * f, c, num(it.w, 3), ' data-id="' + it.id + '"'));
+            out.push(arrowSvg(x1, y1, x1 + (num(it.x2) - x1) * f, y1 + (num(it.y2) - y1) * f, c, num(it.w, 3), ' data-id="' + esc(it.id) + '"'));
           } else if (it.k === 'label') {
             out.push(labelSvg(it.id, L.x, L.y, L.s, c));
           }
@@ -865,7 +865,8 @@
 
       function renderChips() {
         var labels = liveLabels(model), res = checkParts(parts, labels), html = '', i;
-        for (i = 0; i < res.length; i++) if (!res[i].label) html += '<button class="chip" type="button" data-part="' + esc(res[i].part) + '">' + esc(res[i].part) + '</button>';
+        var typed = lbInput.value.toLowerCase().replace(/^\s+|\s+$/g, '');
+        for (i = 0; i < res.length; i++) if (!res[i].label && (!typed || res[i].part.toLowerCase().indexOf(typed) >= 0)) html += '<button class="chip" type="button" data-part="' + esc(res[i].part) + '">' + esc(res[i].part) + '</button>';
         byId('lb-chips').innerHTML = html;
       }
 
@@ -896,6 +897,7 @@
         var t = e.target;
         if (t && t.getAttribute && t.getAttribute('data-part')) saveLabel(t.getAttribute('data-part'));
       });
+      lbInput.addEventListener('input', function () { if (pending && pending.editId === null) renderChips(); });
       lbInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') { e.preventDefault(); saveLabel(lbInput.value); }
         else if (e.key === 'Escape') { e.preventDefault(); closeLabelBar(); }
