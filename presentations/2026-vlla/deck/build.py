@@ -501,11 +501,12 @@ fade_steps(s, steps)
 i += 1
 s = S[i]
 remove(s, {310})
-placeholder(s, 1.05, 1.2, 3.2, 3.2, 'QR code for the Google Form\n[FORM URL PLACEHOLDER]')
+centered(s, MEDIA + 'form-qr.png', 0.56 + 4.17 / 2, 2.65, 3.4, 3.4)
+text(s, 0.56, 4.45, 4.17, 0.4, ['forms.gle/1BDJ6hXbWxbZRopP8'], size=12, color=NAVY, bold=True, align=PP_ALIGN.CENTER)
 title(s, 5.3, 0.75, 4.2, 0.6, 'Want the Code?', size=32, color=WHITE)
 text(s, 5.3, 1.55, 4.1, 2.9, [
     'Scan to get the code when we release it',
-    ('[short link]', {'color': CYAN, 'bold': True, 'space': 12}),
+    ('forms.gle/1BDJ6hXbWxbZRopP8', {'color': CYAN, 'bold': True, 'space': 12}),
     'If you build zests, I want to trade',
     ('kyle.yancey@virtualarkansas.org', {'bold': True, 'space': 14}),
     ('Thank you for your time \U0001F60A', {'font': HEAD, 'bold': True, 'size': 18}),
@@ -517,7 +518,8 @@ text(s, 5.3, 4.35, 3.0, 0.5, ['“Zest” and “Zestable” are trademarks of V
 i += 1
 s = S[i]
 remove(s, {194, 198})
-placeholder(s, 1.4, 1.2, 3.2, 3.2, 'Same QR code\n[FORM URL PLACEHOLDER]')
+centered(s, MEDIA + 'form-qr.png', 0.58 + 4.89 / 2, 2.65, 3.4, 3.4)
+text(s, 0.58, 4.45, 4.89, 0.4, ['Get the code: forms.gle/1BDJ6hXbWxbZRopP8'], size=12, color=NAVY, bold=True, align=PP_ALIGN.CENTER)
 title(s, 6.0, 1.4, 3.4, 1.0, 'Questions?', size=36, color=WHITE)
 text(s, 6.0, 2.4, 3.3, 1.0, ['kyle.yancey@virtualarkansas.org'], size=13, color=WHITE)
 

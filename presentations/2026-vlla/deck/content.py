@@ -213,7 +213,7 @@ If you want the code when it's released, scan this and fill out the form. And if
 
 Thank you for your time.
 
-[FORM URL PLACEHOLDER: replace the QR box with the real QR code.]"""
+(The QR code and forms.gle/1BDJ6hXbWxbZRopP8 both go to the Get the Zest Code form. Responses land in the Get the Zest Code (Responses) sheet in your Drive.)"""
 
 NOTES[23] = """TIME: 5:00 (clock 30:00). Leave the QR code up.
 

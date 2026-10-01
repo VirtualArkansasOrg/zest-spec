@@ -179,7 +179,7 @@ This is the part to lean on with this audience.
 - Other LMSs. We've looked at Brightspace, Schoology and Buzz.
 
 ### 21. Want the Code?
-- QR code to the Google Form: [[FORM URL PLACEHOLDER]]
+- QR code to the Google Form (forms.gle/1BDJ6hXbWxbZRopP8)
 - Short link under the QR code
 - If you build zests, we want to trade
 - kyle.yancey@virtualarkansas.org
@@ -219,7 +219,7 @@ Leave the QR code up. Short answers go in the speaker notes. Likely questions:
 - Only made-up people in screenshots (Avery Student, Blake Student, Taylor Teacher, Morgan Admin).
 
 ## Open Items
-1. Google Form URL
+1. ~~Google Form URL~~ Done: forms.gle/1BDJ6hXbWxbZRopP8 (QR on slides 22 and 23)
 2. Sandbox links for the four zests after upload
 3. How It Started slide: name the old system or not, and where PhET fits
 4. GitHub links for zest-spec and zest-creator on slide 17: yes or no
