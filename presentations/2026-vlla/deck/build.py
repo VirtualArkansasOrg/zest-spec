@@ -191,14 +191,6 @@ text(s, 0.58, 1.55, 4.8, 2.6, [
     'B.S. Computer Science, Master of Arts in Teaching',
     ('kyle.yancey@virtualarkansas.org', {'color': RED, 'bold': True}),
 ], size=13, space=8)
-ph = box(s, 6.0, 0.9, 2.6, 2.6, RGBColor(0xEE, 0xEE, 0xEE), line=CYAN, shape=MSO_SHAPE.OVAL)
-tf = ph.text_frame
-r = tf.paragraphs[0].add_run()
-tf.paragraphs[0].alignment = PP_ALIGN.CENTER
-r.text = 'Your photo'
-r.font.name = BODY
-r.font.size = Pt(12)
-r.font.color.rgb = GRAY
 
 # 3. Are You Using AI to Build Interactives? (base 6)
 i += 1
@@ -249,8 +241,8 @@ for k, (h, b) in enumerate([('No grade in the gradebook', 'Someone copies scores
                             ('Another login', 'Or another vendor, with another contract')]):
     steps.append(ids(text(s, 1.1, 1.05 + k * 1.22, 3.85, 1.1,
                           [(h, {'font': HEAD, 'bold': True, 'size': 23, 'space': 3}), b], size=14, color=GRAY)))
-title(s, 6.0, 0.8, 3.4, 1.2, "So What's the Catch?", size=30, color=WHITE)
-t6 = text(s, 6.0, 2.1, 3.3, 1.2, ['An interactive on its own is just a web page.'], size=15, color=WHITE)
+title(s, 6.0, 0.8, 3.4, 1.2, "What Zest Solves", size=30, color=WHITE)
+t6 = text(s, 6.0, 1.75, 3.3, 1.6, ['AI can build the interactive. On its own, it is just a web page.'], size=15, color=WHITE)
 fade_steps(s, steps + [ids(t6)])
 
 # 7. What is Zest? (base 12): one box per click
@@ -374,7 +366,7 @@ ZESTS = [
     ('launch-lab', 'Launch Lab', 'Physics  |  Auto-graded',
      'Make a projectile motion lab where students predict the launch angle to hit a target, '
      'auto-graded, with the target distance set by the teacher.',
-     'Same sentence as before, plus a few answers about rounds and practice shots.'),
+     'Built from this sentence plus a few answers about rounds and practice shots.'),
     ('graph-match', 'Graph Match', 'Algebra 2  |  Auto-graded',
      'Build a function transformations game for Algebra 2: students drag sliders to make their graph '
      'match a target curve. Auto-graded, and I want to pick the target functions myself.',
@@ -536,6 +528,18 @@ for slide, clicks in REVEAL:
 
 for n, sl in enumerate(S, 1):
     sl.notes_slide.notes_text_frame.text = NOTES[n]
+
+ORDER = [1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 4, 5, 18, 19, 20, 21, 22, 23]
+DROP = [17]
+lst = prs.slides._sldIdLst
+entries = list(lst)
+for old in DROP:
+    e = entries[old - 1]
+    prs.part.drop_rel(e.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id'))
+    lst.remove(e)
+for e in [entries[o - 1] for o in ORDER]:
+    lst.remove(e)
+    lst.append(e)
 
 prs.save('zest-vlla-2026.pptx')
 print('saved', len(S), 'slides;', sum(len(c) for _, c in REVEAL), 'clicks')

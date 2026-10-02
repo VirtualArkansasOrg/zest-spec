@@ -13,7 +13,7 @@ NOTES[2] = """TIME: 0:45 (clock 1:00)
 
 Quick background so you know where I'm coming from. I taught for about ten years: physics, chemistry, biology, physical science, business and computer science. I've been writing code for about 25 years. These days I'm the Data Science Specialist at Virtual Arkansas, and most of what I build is AI tools for our teachers and students.
 
-[Kyle: add a photo in the circle, and update anything that's changed.]"""
+[Kyle: update anything that's changed.]"""
 
 NOTES[3] = """TIME: 1:00 (clock 2:00)
 
@@ -25,9 +25,9 @@ Show of hands. Is anyone here using AI to build their own interactives? Simulati
 
 That's the gap. AI can build the activity now. A teacher can describe something and get a working page back in a few minutes. Getting that page into the gradebook, with a record of what the student did, is the hard part. That's what I want to show you."""
 
-NOTES[4] = """TIME: 1:00 (clock 3:00)
+NOTES[4] = """TIME: 1:00 (clock 16:40)
 
-Here's one sentence a teacher could type. (Read it.)
+So how did these get made? Here's one sentence a teacher could type. (Read it.)
 
 That's the whole prompt.
 
@@ -35,7 +35,7 @@ That's the whole prompt.
 
 Let me show you what happened in between."""
 
-NOTES[5] = """TIME: 2:30 (clock 5:30)
+NOTES[5] = """TIME: 2:30 (clock 19:10)
 
 PLAY THE BUILD RECORDING (1:41). It's a real run, sped up; talk over it.
 
@@ -49,17 +49,17 @@ Notice there's no code on screen that the teacher has to read.
 
 [Backup: if the video won't play, use the stills in the media folder.]"""
 
-NOTES[6] = """TIME: 1:15 (clock 6:45)
+NOTES[6] = """TIME: 1:15 (clock 3:15)
 
-So what's the catch?
+So AI can build the activity. Here's what Zest solves.
 
 [CLICK] There's no grade in the gradebook. Somebody has to copy scores over, or it just doesn't count.
 [CLICK] There's no record of what the student did. The teacher can't see the work.
 [CLICK] And it's usually another login, or another vendor with another contract.
 
-[CLICK] An interactive on its own is just a web page. That's the problem Zest solves."""
+[CLICK] AI can build the interactive, but on its own it's just a web page. Zest is what turns it into coursework."""
 
-NOTES[7] = """TIME: 1:45 (clock 8:30)
+NOTES[7] = """TIME: 1:45 (clock 5:00)
 
 Zest is an LTI 1.3 tool we built at Virtual Arkansas. It runs on our own server and plugs into Canvas.
 
@@ -72,7 +72,7 @@ A zest is a zip of plain HTML, CSS and JavaScript plus a small settings file. It
 
 Work is saved as the student goes, so it follows them to another device."""
 
-NOTES[8] = """TIME: 1:00 (clock 9:30)
+NOTES[8] = """TIME: 1:00 (clock 6:00)
 
 How it started.
 
@@ -84,7 +84,7 @@ How it started.
 
 [Kyle: the session title says "From PhET to Keyboarding". If you want, mention where PhET-style simulations fit here.]"""
 
-NOTES[9] = """TIME: 3:00 (clock 12:30)
+NOTES[9] = """TIME: 3:00 (clock 9:00)
 
 LIVE DEMO in Canvas. Backup recording if the network is down.
 
@@ -95,7 +95,7 @@ LIVE DEMO in Canvas. Backup recording if the network is down.
 
 Keep it moving. If something hangs for more than ten seconds, switch to the backup."""
 
-NOTES[10] = """TIME: 1:00 (clock 13:30)
+NOTES[10] = """TIME: 1:00 (clock 10:00)
 
 This is the part teachers like most. Canvas SpeedGrader normally shows a file or a text box. With Zest, every activity can bring its own page for SpeedGrader, so the teacher sees the actual work.
 
@@ -108,27 +108,27 @@ The AI builds these too. In the prompt for Sketch & Label, the teacher just said
 
 [Kyle: once the zests are on your sandbox, a screenshot of one of these inside real Canvas SpeedGrader would be the strongest image for this slide.]"""
 
-NOTES[11] = """TIME: 1:00 (clock 14:30)
+NOTES[11] = """TIME: 1:00 (clock 11:00)
 
 [CLICK] Each course can set up the same zest differently. For keyboarding, that's a different passage.
 [CLICK] When we found a bug, we fixed the package once and updated every copy at once. No broken links, and no student lost any work.
 [CLICK] It works on managed Chromebooks that block third-party cookies. That one took some doing."""
 
-NOTES[12] = """TIME: 0:20 (clock 14:50)
+NOTES[12] = """TIME: 0:20 (clock 11:20)
 
-So what else can you make? Three of these are auto-graded and one, Sketch & Label, is teacher-graded. Every one of these came from a prompt, the same way you saw in the recording. They're on my sandbox. The next four slides have QR codes, so try them on your phone while I talk. On a phone they open in a preview mode, so nothing gets saved."""
+So what else can you make? Three of these are auto-graded and one, Sketch & Label, is teacher-graded. Every one of these came from a prompt. I'll show you how in a few minutes. They're on my sandbox. The next four slides have QR codes, so try them on your phone while I talk. On a phone they open in a preview mode, so nothing gets saved."""
 
-NOTES[13] = """TIME: 1:05 (clock 15:55)
+NOTES[13] = """TIME: 1:05 (clock 12:25)
 
 Launch Lab. Physics.
 
-Same sentence as the recording. This time I answered a few follow-up questions: five rounds, practice shots after each scored one, and settings for the targets, launch speed and how close counts as a hit. That's the difference between this one and the one you saw built.
+This came from the sentence on the slide plus a few answers to follow-up questions: five rounds, practice shots after each scored one, and settings for the targets, launch speed and how close counts as a hit. In a few minutes you'll see what that sentence alone produces.
 
 Students lock in a predicted angle, then take one scored launch. (For today there's a Start over button, which the teacher can turn off for a real graded check.) After that they can take practice shots. A lot of them discover that two different angles hit the same target, which is a nice conversation starter.
 
 [CLICK] And this is what the teacher sees in SpeedGrader: every scored shot drawn on one field, and a table of each round."""
 
-NOTES[14] = """TIME: 1:05 (clock 17:00)
+NOTES[14] = """TIME: 1:05 (clock 13:30)
 
 Graph Match. Algebra 2.
 
@@ -138,7 +138,7 @@ The part I want you to notice: when the teacher embeds it, they pick a set of gr
 
 [CLICK] In SpeedGrader: each graph, with the student's curve on top of the target."""
 
-NOTES[15] = """TIME: 1:05 (clock 18:05)
+NOTES[15] = """TIME: 1:05 (clock 14:35)
 
 Sketch and Label. Life science. This one is teacher-graded.
 
@@ -148,7 +148,7 @@ Students draw arrows and write labels right on a plant cell, then explain what t
 
 (Two things the AI added that the prompt didn't ask for, and we kept: label suggestions while typing, and the replay link after a preview submit.)"""
 
-NOTES[16] = """TIME: 1:05 (clock 19:10)
+NOTES[16] = """TIME: 1:05 (clock 15:40)
 
 Escape the Archive. U.S. History.
 
@@ -169,7 +169,7 @@ Why build it ourselves instead of buying something?
 
 [Kyle: replace with your real reasons.]"""
 
-NOTES[18] = """TIME: 1:30 (clock 21:25)
+NOTES[18] = """TIME: 1:30 (clock 20:40)
 
 This is the part I want you to take home.
 
@@ -181,7 +181,7 @@ Picture a shared library of gradable activities across virtual programs. That's 
 
 [Kyle: decide whether to show the GitHub links for zest-spec and zest-creator.]"""
 
-NOTES[19] = """TIME: 0:45 (clock 22:10)
+NOTES[19] = """TIME: 0:45 (clock 21:25)
 
 It wasn't all easy.
 
@@ -190,7 +190,7 @@ It wasn't all easy.
 [CLICK] Managed Chromebooks block third-party cookies, so launches had to work without them.
 [CLICK] Rule number one was never lose student work. We test every change with fake teachers, students and admins going through real launches."""
 
-NOTES[20] = """TIME: 1:15 (clock 23:25)
+NOTES[20] = """TIME: 1:15 (clock 22:40)
 
 The fair question: can you trust what the AI made?
 
@@ -199,7 +199,7 @@ The fair question: can you trust what the AI made?
 [CLICK] But somebody still has to test it as a student, and a subject expert should check the content. AI can get a fact or an answer key wrong.
 Also on that last card: auto-graded scores are calculated in the browser. A student who knows what they're doing could fake one. For anything high stakes, use teacher grading."""
 
-NOTES[21] = """TIME: 0:45 (clock 24:10)
+NOTES[21] = """TIME: 0:45 (clock 23:25)
 
 What's next:
 [CLICK] We're releasing the server code under the MIT license.
@@ -207,7 +207,7 @@ What's next:
 [CLICK] An accessibility review. I'm not claiming WCAG conformance yet.
 [CLICK] Other LMSs. We've done the research on Brightspace, Schoology and Buzz, but Canvas is the only one today."""
 
-NOTES[22] = """TIME: 0:45 (clock 24:55)
+NOTES[22] = """TIME: 0:45 (clock 24:10)
 
 If you want the code when it's released, scan this and fill out the form. And if you build zests, I want to trade.
 
@@ -215,7 +215,7 @@ Thank you for your time.
 
 (The QR code and forms.gle/1BDJ6hXbWxbZRopP8 both go to the Get the Zest Code form. Responses land in the Get the Zest Code (Responses) sheet in your Drive.)"""
 
-NOTES[23] = """TIME: 5:00 (clock 30:00). Leave the QR code up.
+NOTES[23] = """TIME: 5:00 or more (talk ends at 24:10, so there are about 50 seconds of slack). Leave the QR code up.
 
 LIKELY QUESTIONS, SHORT ANSWERS
 

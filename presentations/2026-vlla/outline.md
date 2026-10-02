@@ -26,27 +26,29 @@ Written to match Kyle's past decks (Beyond Chat, The Post-Star Trek Education) a
 | 1 | Title | 0:15 | 0:15 |
 | 2 | About Me | 0:45 | 1:00 |
 | 3 | Are You Using AI to Build Interactives? | 1:00 | 2:00 |
-| 4 | One Sentence | 1:00 | 3:00 |
-| 5 | Let's Watch (build recording, 1:41) | 2:30 | 5:30 |
-| 6 | So What's the Catch? | 1:15 | 6:45 |
-| 7 | What is Zest? | 1:45 | 8:30 |
-| 8 | How It Started | 1:00 | 9:30 |
-| 9 | Keyboarding Practice (live demo) | 3:00 | 12:30 |
-| 10 | A Custom View in SpeedGrader | 1:00 | 13:30 |
-| 11 | One Package, Lots of Courses | 1:00 | 14:30 |
-| 12 | What Else Can You Make? | 0:20 | 14:50 |
-| 13-16 | Four zests, 1:05 each (click shows the SpeedGrader view) | 4:20 | 19:10 |
-| 17 | Why Build It Ourselves? | 0:45 | 19:55 |
-| 18 | Share Them With Other Programs | 1:30 | 21:25 |
-| 19 | Challenges | 0:45 | 22:10 |
-| 20 | Can You Trust What the AI Made? | 1:15 | 23:25 |
-| 21 | What's Next | 0:45 | 24:10 |
-| 22 | Want the Code? | 0:45 | 24:55 |
-| 23 | Questions | 5:00 | 30:00 |
+| 4 | What Zest Solves | 1:15 | 3:15 |
+| 5 | What is Zest? | 1:45 | 5:00 |
+| 6 | How It Started | 1:00 | 6:00 |
+| 7 | Keyboarding Practice (live demo) | 3:00 | 9:00 |
+| 8 | A Custom View in SpeedGrader | 1:00 | 10:00 |
+| 9 | One Package, Lots of Courses | 1:00 | 11:00 |
+| 10 | What Else Can You Make? | 0:20 | 11:20 |
+| 11 | Launch Lab | 1:05 | 12:25 |
+| 12 | Graph Match | 1:05 | 13:30 |
+| 13 | Sketch & Label | 1:05 | 14:35 |
+| 14 | Escape the Archive | 1:05 | 15:40 |
+| 15 | One Sentence | 1:00 | 16:40 |
+| 16 | Let's Watch (build recording, 1:41) | 2:30 | 19:10 |
+| 17 | Share Them With Other Programs | 1:30 | 20:40 |
+| 18 | Challenges | 0:45 | 21:25 |
+| 19 | Can You Trust What the AI Made? | 1:15 | 22:40 |
+| 20 | What's Next | 0:45 | 23:25 |
+| 21 | Want the Code? | 0:45 | 24:10 |
+| 22 | Questions | 5:00+ |  |
 
-About 5 seconds of slack. If running long, show two of the four zests.
+The talk ends at 24:10, leaving about 50 seconds of slack before questions.
 
-Draft 6 changes: click-to-reveal animations on most slides; a new slide 10 on the custom SpeedGrader view; each zest slide reveals its SpeedGrader page on click; slide 4 shows what the one-sentence recorded run actually produced.
+Draft 7 (October 2): the About Me photo placeholder is gone; "So What's the Catch?" is now "What Zest Solves" and comes right after the opening question; One Sentence and Let's Watch moved after the four zest examples; Why Build It Ourselves? was cut. The slide-by-slide sections below are from draft 6 and keep their old numbers.
 
 ## Slides
 
