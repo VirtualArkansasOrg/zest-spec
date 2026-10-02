@@ -1,0 +1,22 @@
+{
+  "zestSpec": "1.0",
+  "name": "Keyboarding Practice (VLLA demo)",
+  "description": "Students type a configurable passage and are auto-graded with a fixed formula that weights accuracy at 65% and WPM at 35% (WPM scored against a 30 wpm target, capped), with an additional accuracy multiplier. The passage and title can be customized per zest via the Assessment Editor. This copy adds a preview mode for people who open it without a Canvas launch (for example from a QR code at a conference); its name differs from the production package so uploading it never updates production copies.",
+  "version": "3.1.3-vlla.1",
+  "grading": "auto",
+  "reviewFile": "review.html",
+  "editorFile": "editor.html",
+  "assessmentFile": "assessment.json",
+  "sandbox": {
+    "allowScripts": true,
+    "allowSameOrigin": true
+  },
+  "permissions": [
+    "fullscreen"
+  ],
+  "tags": [
+    "typing",
+    "keyboarding",
+    "auto-graded"
+  ]
+}
