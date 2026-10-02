@@ -1,0 +1,16 @@
+[
+ [0.3, 4.0, "This is a real Claude Code session, sped up where it's marked."],
+ [4.3, 17.4, "A teacher types one sentence. Make a projectile motion lab where students predict the launch angle to hit a target, auto-graded, with the target distance set by the teacher."],
+ [17.8, 23.6, "Claude reads the template's guides and plans the lab. That part took about two minutes."],
+ [23.8, 29.1, "Then it writes the student page, the SpeedGrader view, and the settings."],
+ [29.4, 38.3, "When it's done, it explains what it built and the choices it made, so the teacher can check them."],
+ [38.6, 41.2, "A security check reviews the files."],
+ [41.5, 52.4, "Next, the teacher types zest build. It checks the package for anything Canvas would break, and packages it."],
+ [52.7, 58.4, "It passed. About three minutes, from one sentence to a file that's ready to upload."],
+ [58.8, 63.0, "Now the result, in our stand-in Canvas."],
+ [63.3, 75.0, "The teacher opens Zest from the Canvas editor and uploads the file. Zest shows the lab's settings. The teacher keeps the defaults and embeds it."],
+ [75.4, 85.3, "A student opens the assignment. First try: thirty degrees. It lands about ten meters past the target."],
+ [85.6, 91.3, "Second try: twenty-two point four degrees. A hit."],
+ [91.6, 95.9, "The student submits, and the score goes to the gradebook."],
+ [96.2, 101.4, "Eight out of ten, graded automatically. The teacher never wrote a line of code."]
+]
