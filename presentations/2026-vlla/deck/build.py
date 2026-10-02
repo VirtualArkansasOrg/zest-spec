@@ -225,8 +225,20 @@ s = S[i]
 remove(s, {562, 563, 564, 565, 566, 567})
 title(s, 0.56, 0.3, 6, 0.55, "Let's Watch", size=28, color=WHITE)
 poster = MEDIA + 'build-recording-poster.png'
+import json as _json
+_lp = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'links.local.json')
+_VIDEO = _json.load(open(_lp)).get('video') if os.path.exists(_lp) else None
 if os.path.exists(poster):
-    centered(s, poster, 5.0, 3.0, 7.6, 4.1, border=CYAN)
+    pp = centered(s, poster, 5.0, 3.0, 7.6, 4.1, border=CYAN)
+    if _VIDEO:
+        pp.click_action.hyperlink.address = _VIDEO
+        play = box(s, 5.0 - 0.55, 3.0 - 0.55, 1.1, 1.1, RED, shape=MSO_SHAPE.OVAL)
+        play.click_action.hyperlink.address = _VIDEO
+        tri = s.shapes.add_shape(MSO_SHAPE.ISOSCELES_TRIANGLE, Inches(5.0 - 0.18), Inches(3.0 - 0.25), Inches(0.5), Inches(0.5))
+        tri.rotation = 90
+        tri.fill.solid(); tri.fill.fore_color.rgb = WHITE; tri.line.fill.background()
+        tri.click_action.hyperlink.address = _VIDEO
+        text(s, 5.2, 0.62, 4.3, 0.35, ['Click the video to play (1:41, narrated)'], size=11, color=WHITE, align=PP_ALIGN.RIGHT)
 else:
     placeholder(s, 1.2, 1.0, 7.6, 4.1, 'Build recording (video goes here)')
 text(s, 6.2, 0.4, 3.3, 0.4, ['Real run, sped up'], size=11, color=CYAN, align=PP_ALIGN.RIGHT)
@@ -301,6 +313,17 @@ text(s, 1.1, 1.05, 3.9, 3.6, [
 ], size=12, color=BLACK)
 title(s, 6.0, 0.8, 3.4, 1.2, 'Keyboarding Practice', size=30, color=WHITE)
 text(s, 6.0, 2.1, 3.3, 0.8, ['Live demo'], size=16, color=CYAN, bold=True)
+import json as _json
+_LINKS = {}
+_lp = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'links.local.json')
+if os.path.exists(_lp):
+    _LINKS = _json.load(open(_lp))
+_kq = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'qr-keyboarding-practice.png')
+if os.path.exists(_kq):
+    box(s, 6.0, 2.65, 1.45, 1.45, WHITE)
+    picture(s, _kq, 6.05, 2.7, 1.35, 1.35)
+    text(s, 7.6, 2.9, 1.8, 1.0, ['Try it on your phone', ('Preview mode: nothing is saved', {'size': 10, 'bold': False})],
+         size=12, color=WHITE, bold=True, space=4)
 
 # 10. A Custom View in SpeedGrader (base 17, cards removed): cascade, one example per click
 i += 1

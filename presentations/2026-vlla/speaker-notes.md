@@ -171,7 +171,7 @@ Let me show you what happened in between.
 
 TIME: 2:30 (clock 19:10)
 
-PLAY THE BUILD RECORDING (1:41). It's a real run, sped up; talk over it.
+CLICK THE PICTURE (or the play button) to open the build recording in Drive, then play it full screen. It's 1:41, narrated, a real run sped up. Let the narration carry it; add a word here and there.
 
 - This is Claude Code with our zest-creator template. The teacher types /zest-new and the sentence you just saw.
 - It didn't ask me anything this time. It picked sensible defaults on its own: one target at 45 meters, three launches, full points on the first hit. (Sometimes it asks a couple of plain questions, like whether it should be graded.)
