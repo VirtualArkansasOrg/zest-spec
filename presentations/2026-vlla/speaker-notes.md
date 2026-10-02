@@ -14,8 +14,6 @@ TIME: 0:45 (clock 1:00)
 
 Quick background so you know where I'm coming from. I taught for about ten years: physics, chemistry, biology, physical science, business and computer science. I've been writing code for about 25 years. These days I'm the Data Science Specialist at Virtual Arkansas, and most of what I build is AI tools for our teachers and students.
 
-[Kyle: update anything that's changed.]
-
 ## 3. Are You Using AI to Build Interactives?
 
 TIME: 1:00 (clock 2:00)
@@ -67,7 +65,7 @@ How it started.
 
 [CLICK] And now we're going to keep adding more. Anything that runs in a browser can be a zest.
 
-[Kyle: the session title says "From PhET to Keyboarding". If you want, mention where PhET-style simulations fit here.]
+Along the way we tested it with PhET-style science simulations, with an explore mode the teacher grades and a challenge mode that grades itself. That's where the "From PhET" in the title comes from.
 
 ## 7. Keyboarding Practice (live demo)
 
@@ -94,8 +92,6 @@ This is the part teachers like most. Canvas SpeedGrader normally shows a file or
 [CLICK] Escape the Archive: a timeline of every wrong try and hint.
 
 The AI builds these too. In the prompt for Sketch & Label, the teacher just said "in SpeedGrader I want to see their drawing and watch how they drew it."
-
-[Kyle: once the zests are on your sandbox, a screenshot of one of these inside real Canvas SpeedGrader would be the strongest image for this slide.]
 
 ## 9. One Package, Lots of Courses
 
@@ -199,7 +195,7 @@ A zest is one file. Any program running Zest can upload it, and grading and revi
 
 Picture a shared library of gradable activities across virtual programs. That's where I'd like this to go.
 
-[Kyle: decide whether to show the GitHub links for zest-spec and zest-creator.]
+Both links are on the slide: github.com/VirtualArkansasOrg/zest-spec and github.com/VirtualArkansasOrg/zest-creator.
 
 ## 18. Challenges
 
@@ -247,37 +243,4 @@ Thank you for your time.
 
 TIME: 5:00 or more (talk ends at 24:10, so there are about 50 seconds of slack). Leave the QR code up.
 
-LIKELY QUESTIONS, SHORT ANSWERS
-
-What does Claude Code cost?
-It needs a paid Claude plan. Check current pricing; it's a per-person subscription, not per student.
-
-Does student data go to the AI?
-No. The AI only sees what the teacher types while building the activity. The Zest server has no AI in it and doesn't send student work anywhere.
-
-Who checks what the AI builds? Can it be wrong?
-Yes, it can be wrong. The build checks and the security review catch technical problems. A teacher tests it as a student, and a subject expert checks the content, same as any material we'd put in a course.
-
-Hosting and cost?
-It runs on your own server (Docker and PostgreSQL), with encrypted nightly backups. No per-seat license.
-
-Can we share zests with you, or use yours?
-Yes. That's the point of the spec. A zest built for one Zest server runs on any other.
-
-Other LMSs?
-Canvas only for now. We've researched Brightspace, Schoology and Buzz.
-
-Accessibility?
-A review is planned. Zests are plain HTML, so they can be built accessibly, but I'm not claiming conformance yet.
-
-Can students cheat on auto-graded ones?
-Scores are calculated in the browser, so a determined student could. Use teacher grading for high stakes.
-
-Can we upload any zest someone sends us?
-Only upload packages you trust for now. Packages run on the same domain as the tool; a separate domain is the next security step.
-
-Support?
-[Kyle: your answer.]
-
-When does the server code come out?
-[Kyle: your answer.] Fill out the form and I'll let you know.
+Take questions. Answer them in your own words.

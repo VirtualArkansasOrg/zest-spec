@@ -272,7 +272,8 @@ s = S[i]
 remove(s, {256, 262, 263, 267, 271, 272, 273})
 title(s, 1.0, 1.35, 3.5, 0.6, 'How It Started', size=30)
 text(s, 1.0, 2.05, 3.3, 1.6, [
-    'We built Zest for our own courses first, one need at a time.'], size=13, color=GRAY)
+    'We built Zest for our own courses first, one need at a time.',
+    ('Along the way we tested it with PhET-style science simulations.', {'size': 12, 'italic': True})], size=13, color=GRAY, space=10)
 pills = [259, 264, 268]
 steps = []
 for k, (step, label) in enumerate([('1', 'Coding tools to replace an expensive system'),
@@ -393,7 +394,12 @@ for k, (slug, name, sub, prompt, extra) in enumerate(ZESTS):
                                   ('“' + prompt + '”', {'italic': True, 'size': 11.5 if small else 12.5})],
          size=12)
     text(s, 5.3, 3.5, 2.9, 0.8, [extra], size=11, color=NAVY)
-    placeholder(s, 8.35, 3.35, 1.05, 1.05, 'QR code\n(link coming)')
+    QR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'qr-%s.png' % slug)
+    if os.path.exists(QR):
+        picture(s, QR, 8.25, 2.95, 1.25, 1.25)
+        text(s, 8.0, 4.22, 1.75, 0.25, ['Try it on your phone'], size=9, color=NAVY, bold=True, align=PP_ALIGN.CENTER)
+    else:
+        placeholder(s, 8.35, 3.35, 1.05, 1.05, 'QR code\n(link coming)')
     # the teacher's view, on click
     rv = picture(s, MEDIA + slug + '-review.png', 1.95, 2.35, 3.2, None, border=NAVY)
     tag = box(s, 1.95, 2.02, 2.55, 0.3, NAVY)
@@ -433,9 +439,11 @@ text(s, 1.0, 0.95, 3.35, 3.8, [
     ('Your keyboarding activity can be my keyboarding activity', {'space': 0})], size=15, color=BLACK)
 t18 = text(s, 5.7, 0.95, 3.35, 3.8, [
     ('Written Down', {'font': HEAD, 'bold': True, 'size': 28, 'color': CYAN, 'space': 10}),
-    ('The package format is a published specification', {'space': 14}),
-    ('The zest-creator template is public', {'space': 14}),
-    ('Picture a shared library of gradable activities across programs', {'space': 0})], size=15, color=WHITE)
+    ('The package format is a published specification', {'space': 2}),
+    ('github.com/VirtualArkansasOrg/zest-spec', {'size': 11, 'color': CYAN, 'space': 10}),
+    ('The zest-creator template is public', {'space': 2}),
+    ('github.com/VirtualArkansasOrg/zest-creator', {'size': 11, 'color': CYAN, 'space': 10}),
+    ('Picture a shared library of gradable activities across programs', {'space': 0})], size=14, color=WHITE)
 fade_steps(s, [ids(387, t18)])
 
 # 19. Challenges (base 11): one per click
