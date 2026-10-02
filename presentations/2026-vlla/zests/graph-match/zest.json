@@ -1,8 +1,8 @@
 {
   "zestSpec": "1.0",
   "name": "Graph Match: Function Transformations",
-  "version": "1.0.0",
-  "description": "Algebra 2 transformations game: students drag a, h and k sliders (or the curve's key point) to make y = a·f(x − h) + k land on a target curve. Auto-graded: 2 points per graph matched without a hint, 1 with a hint. Teachers pick the target functions, which sliders are unlocked, the match tolerance, checks per graph and hint/equation options in the settings editor.",
+  "version": "1.1.0",
+  "description": "Algebra 2 transformations game: students drag a, h and k sliders (or the curve's key point) to make y = a·f(x − h) + k land on a target curve. Auto-graded: 2 points per graph matched without a hint, 1 with a hint. Teachers pick a ready-made set of graphs when they embed it, or build their own list of target functions, which sliders are unlocked, the match tolerance, checks per graph and hint/equation options in the settings editor.",
   "author": "Virtual Arkansas",
   "grading": "auto",
   "mainFile": "index.html",
@@ -13,5 +13,55 @@
     "allowScripts": true,
     "allowSameOrigin": true
   },
-  "tags": ["math", "algebra 2", "functions", "transformations", "graphing", "auto-graded", "game"]
+  "tags": [
+    "math",
+    "algebra 2",
+    "functions",
+    "transformations",
+    "graphing",
+    "auto-graded",
+    "game"
+  ],
+  "parameters": [
+    {
+      "key": "graphSet",
+      "type": "select",
+      "label": "Which graphs",
+      "default": "editor",
+      "options": [
+        {
+          "value": "editor",
+          "label": "The list from the Editor (default)"
+        },
+        {
+          "value": "mixed",
+          "label": "Mixed review"
+        },
+        {
+          "value": "quadratic",
+          "label": "Quadratics"
+        },
+        {
+          "value": "abs",
+          "label": "Absolute value"
+        },
+        {
+          "value": "sqrt",
+          "label": "Square roots"
+        },
+        {
+          "value": "cubic",
+          "label": "Cubics"
+        },
+        {
+          "value": "sine",
+          "label": "Sine waves"
+        },
+        {
+          "value": "linear",
+          "label": "Lines"
+        }
+      ]
+    }
+  ]
 }

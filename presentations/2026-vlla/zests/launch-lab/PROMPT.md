@@ -30,3 +30,8 @@ What the teacher said when /zest-new asked its follow-up questions, in their wor
 - **Refinements after the first look:** "Make it look great on a phone too." "Put the range
   formula on the screen, small, for students who want it." "Show a short summary of all the
   rounds at the end."
+
+## Changes requested after the first build (October 2, 2026)
+
+- "Launch lab doesn't have a way to reset. I know we normally wouldn't but for this demonstration, it would be helpful."
+  Added a two-tap "Start over" button inside Canvas, controlled by a new setting `allowRestart` (on by default; turn it off for a graded check). "Play again" on the results screen does the same thing. Version 1.1.0.

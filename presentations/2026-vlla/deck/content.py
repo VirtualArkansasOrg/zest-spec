@@ -116,7 +116,7 @@ NOTES[11] = """TIME: 1:00 (clock 14:30)
 
 NOTES[12] = """TIME: 0:20 (clock 14:50)
 
-So what else can you make? Every one of these came from a prompt, the same way you saw in the recording. They're on my sandbox. The next four slides have QR codes, so try them on your phone while I talk. On a phone they open in a preview mode, so nothing gets saved."""
+So what else can you make? Three of these are auto-graded and one, Sketch & Label, is teacher-graded. Every one of these came from a prompt, the same way you saw in the recording. They're on my sandbox. The next four slides have QR codes, so try them on your phone while I talk. On a phone they open in a preview mode, so nothing gets saved."""
 
 NOTES[13] = """TIME: 1:05 (clock 15:55)
 
@@ -124,7 +124,7 @@ Launch Lab. Physics.
 
 Same sentence as the recording. This time I answered a few follow-up questions: five rounds, practice shots after each scored one, and settings for the targets, launch speed and how close counts as a hit. That's the difference between this one and the one you saw built.
 
-Students lock in a predicted angle, then take one scored launch. After that they can take practice shots. A lot of them discover that two different angles hit the same target, which is a nice conversation starter.
+Students lock in a predicted angle, then take one scored launch. (For today there's a Start over button, which the teacher can turn off for a real graded check.) After that they can take practice shots. A lot of them discover that two different angles hit the same target, which is a nice conversation starter.
 
 [CLICK] And this is what the teacher sees in SpeedGrader: every scored shot drawn on one field, and a table of each round."""
 
@@ -134,7 +134,7 @@ Graph Match. Algebra 2.
 
 Students move a, h and k until their curve covers the target. The equation updates as they go.
 
-The part I want you to notice: the teacher picks the target functions on a settings page. The AI built that settings page too, from "I want to pick the target functions myself." One package, set up differently for each class.
+The part I want you to notice: when the teacher embeds it, they pick a set of graphs (quadratics, absolute value, sine waves and so on), or open the settings editor and build their own list. The AI built that settings page too, from "I want to pick the target functions myself." One package, set up differently for each class. On your phone, the preview has the same choice at the top.
 
 [CLICK] In SpeedGrader: each graph, with the student's curve on top of the target."""
 

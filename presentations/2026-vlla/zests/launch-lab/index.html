@@ -47,6 +47,13 @@
     .sync-dot.error, .sync-dot.expired { background: #e74c3c; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
+    .live-restart {
+      display: none; background: none; border: 1px solid #c9d3dc; color: #4b5b6a; border-radius: 12px;
+      font-size: 11px; padding: 2px 10px; cursor: pointer; white-space: nowrap;
+    }
+    .live-restart.on { display: inline-block; }
+    .live-restart.confirm { background: #fdecea; border-color: #c0392b; color: #c0392b; }
+
     .preview-bar {
       flex: 0 0 auto; display: none; align-items: center; justify-content: center; gap: 10px;
       background: #fff8e6; color: #7a5a00; border-bottom: 1px solid #f1dfae;
@@ -230,6 +237,7 @@
       <div class="chips" id="chips" aria-label="Rounds"></div>
       <div class="scorebox" id="scorebox">Hits <b id="hitsNum">0</b> / <span id="roundsNum">5</span></div>
       <div class="sync" id="sync"><span class="sync-dot" id="syncDot"></span><span id="syncText">Saved</span></div>
+      <button type="button" class="live-restart" id="liveRestartBtn">Start over</button>
     </header>
     <div class="preview-bar" id="previewBar">
       <span>Preview: try it out. Nothing is saved or submitted.</span>
@@ -564,7 +572,7 @@
 
     function renderSubmitStatus() {
       var st = $('resStatus'), btn = $('submitBtn'), again = $('againBtn');
-      again.className = 'btn btn-ghost' + (mode === 'preview' ? '' : ' hidden');
+      again.className = 'btn btn-ghost' + (mode === 'preview' || (mode === 'live' && allowRestart) ? '' : ' hidden');
       if (submitting) { btn.disabled = true; btn.textContent = 'Submitting…'; return; }
       var info = S.submitInfo;
       if (S.submitted) {
@@ -1101,20 +1109,35 @@
       $('formulaBtn').setAttribute('aria-expanded', on ? 'true' : 'false');
     });
 
-    // Preview restart (two-click)
-    var restartPending = false, restartTimer = null;
-    function restartPreview() {
-      var b = $('restartBtn');
-      if (!restartPending) {
-        restartPending = true; b.textContent = 'Tap again to restart'; b.className = 'confirm';
-        restartTimer = setTimeout(function () { restartPending = false; b.textContent = 'Restart'; b.className = ''; }, 4000);
-        return;
-      }
-      clearTimeout(restartTimer); restartPending = false; b.textContent = 'Restart'; b.className = '';
-      if (mode === 'preview') startSession('preview', DEFAULTS, null);
+    // Restart (two-click). In preview it is always there; inside Canvas only when the
+    // teacher's allowRestart setting is on (it is by default, for demos and practice).
+    var liveRaw = null, allowRestart = false;
+    function restartLive() {
+      var p = null;
+      try { p = Zest.clearState(); } catch (e) { p = null; }
+      startSession('live', liveRaw, null);
+      if (p && p.then) p.then(save, save); else save();
     }
-    $('restartBtn').addEventListener('click', restartPreview);
-    $('againBtn').addEventListener('click', function () { if (mode === 'preview') startSession('preview', DEFAULTS, null); });
+    function restartNow() {
+      if (mode === 'preview') startSession('preview', DEFAULTS, null);
+      else if (mode === 'live' && allowRestart) restartLive();
+    }
+    function twoClick(id, label) {
+      var pending = false, timer = null;
+      $(id).addEventListener('click', function () {
+        var b = $(id), base = id === 'liveRestartBtn' ? 'live-restart on' : '';
+        if (!pending) {
+          pending = true; b.textContent = 'Tap again to start over'; b.className = base + ' confirm';
+          timer = setTimeout(function () { pending = false; b.textContent = label; b.className = base; }, 4000);
+          return;
+        }
+        clearTimeout(timer); pending = false; b.textContent = label; b.className = base;
+        restartNow();
+      });
+    }
+    twoClick('restartBtn', 'Restart');
+    twoClick('liveRestartBtn', 'Start over');
+    $('againBtn').addEventListener('click', restartNow);
 
     // ---------- start-up: live (Canvas) or preview ----------
     function startSession(m, rawParams, savedState) {
@@ -1127,6 +1150,7 @@
       setAngle(S.angle);
       $('previewBar').className = 'preview-bar' + (m === 'preview' ? ' on' : '');
       $('sync').className = 'sync' + (m === 'live' ? ' on' : '');
+      $('liveRestartBtn').className = 'live-restart' + (m === 'live' && allowRestart ? ' on' : '');
       $('results').className = 'results';
       if (S.phase === 'practice') {
         var r = S.rounds[S.idx];
@@ -1155,6 +1179,9 @@
         tolerance: Zest.getParameter('tolerance', DEFAULTS.tolerance),
         showGuide: Zest.getParameter('showGuide', DEFAULTS.showGuide)
       };
+      liveRaw = raw;
+      var ar = Zest.getParameter('allowRestart', true);
+      allowRestart = !(ar === false || ar === 'false' || ar === 0 || ar === '0');
       Zest.onSyncStatus(function (status) {
         $('syncDot').className = 'sync-dot ' + status;
         var labels = { synced: 'Saved', dirty: 'Saving soon', syncing: 'Saving…', error: 'Save failed, retrying', expired: 'Reopen from Canvas to keep saving' };

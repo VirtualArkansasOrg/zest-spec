@@ -22,3 +22,8 @@ Refinements asked for while building:
 - "In SpeedGrader I want to see each target and what the student ended up with, drawn on top of each other."
 
 What the builder decided (not specified by the teacher): 2 points per graph (1 with a hint), 3 checks per graph by default, a match tolerance of 0.1 grid units measured along the whole visible curve (so equivalent lines such as y = 2(x + 2) + 1 and y = 2x + 5 count as the same graph), slider steps of 0.25 for a and 0.5 for h and k, and a draggable key point on the graph as a shortcut for h and k.
+
+## Changes requested after the first build (October 2, 2026)
+
+- "Graph match doesn't have a way to set the graphs beyond the default set."
+  Added a "Which graphs" setting (`graphSet`) to the embed form: the Editor's list (default), Mixed review, Quadratics, Absolute value, Square roots, Cubics, Sine waves or Lines. The phone preview has the same choice in its banner. The settings editor (the Editor button in the picker's library) still builds a custom list. Version 1.1.0.

@@ -1,13 +1,21 @@
 {
   "zestSpec": "1.0",
   "name": "Launch Lab: Projectile Motion",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Students predict the launch angle that lands a projectile on a target at a teacher-set distance, then launch to test it. The prediction is auto-graded (hits out of rounds); unscored practice shots afterwards let students explore, for example discovering that complementary angles land at the same distance.",
   "author": "Virtual Arkansas",
   "grading": "auto",
   "mainFile": "index.html",
   "reviewFile": "review.html",
-  "tags": ["physics", "projectile motion", "kinematics", "simulation", "lab", "grades 9-12", "auto-graded"],
+  "tags": [
+    "physics",
+    "projectile motion",
+    "kinematics",
+    "simulation",
+    "lab",
+    "grades 9-12",
+    "auto-graded"
+  ],
   "parameters": [
     {
       "key": "targets",
@@ -36,6 +44,12 @@
       "type": "boolean",
       "label": "Show a dotted aiming guide and the hint that two angles can hit the same target",
       "default": false
+    },
+    {
+      "key": "allowRestart",
+      "type": "boolean",
+      "label": "Show a Start over button (students can reset their rounds; good for demos and practice, turn off for a graded check)",
+      "default": true
     }
   ],
   "sandbox": {

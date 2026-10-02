@@ -358,14 +358,16 @@ fade_steps(s, steps)
 i += 1
 s = S[i]
 cards = [(0.68, 0.37), (5.40, 0.37), (0.68, 2.92), (5.40, 2.92)]
-shots = [('launch-lab-desktop.png', 'Launch Lab', 'Physics'),
-         ('graph-match-desktop.png', 'Graph Match', 'Algebra 2'),
-         ('sketch-label-desktop.png', 'Sketch & Label', 'Life Science'),
-         ('escape-the-archive-desktop.png', 'Escape the Archive', 'U.S. History')]
-for (cx, cy), (img, name, subj) in zip(cards, shots):
+shots = [('launch-lab-desktop.png', 'Launch Lab', 'Physics', 'Auto-graded'),
+         ('graph-match-desktop.png', 'Graph Match', 'Algebra 2', 'Auto-graded'),
+         ('sketch-label-desktop.png', 'Sketch & Label', 'Life Science', 'Teacher-graded'),
+         ('escape-the-archive-desktop.png', 'Escape the Archive', 'U.S. History', 'Auto-graded')]
+for (cx, cy), (img, name, subj, grading) in zip(cards, shots):
     picture(s, MEDIA + img, cx + 0.15, cy + 0.17, 2.6, None)
     text(s, cx + 2.9, cy + 0.3, 1.05, 1.7, [(name, {'font': HEAD, 'bold': True, 'size': 14, 'space': 4}),
-                                           (subj, {'size': 10, 'color': GRAY})], size=12)
+                                           (subj, {'size': 10, 'color': GRAY, 'space': 4}),
+                                           (grading, {'size': 10, 'bold': True,
+                                                      'color': RED if grading.startswith('Teacher') else NAVY})], size=12)
 
 # 13-16. The four zests (base 4): click to show the teacher's SpeedGrader view
 ZESTS = [
@@ -376,7 +378,7 @@ ZESTS = [
     ('graph-match', 'Graph Match', 'Algebra 2  |  Auto-graded',
      'Build a function transformations game for Algebra 2: students drag sliders to make their graph '
      'match a target curve. Auto-graded, and I want to pick the target functions myself.',
-     'The AI also built the settings page where the teacher picks the targets.'),
+     'Teachers pick a ready-made set of graphs, or build their own in a settings page the AI also built.'),
     ('sketch-label', 'Sketch & Label', 'Life Science  |  Teacher-graded',
      'Students label a plant cell by drawing arrows and writing the names of the parts right on the '
      'diagram, then explain in a sentence what the chloroplast does. I’ll grade it myself, and in '
